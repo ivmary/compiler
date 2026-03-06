@@ -1,9 +1,12 @@
 %{
 
   #include "cpq.tab.h"
+  #include "symbol_table.h"
 
-#include <string.h> 
-#include <stdlib.h>
+  #include <string.h> 
+  #include <stdlib.h>
+
+  extern int yylineno;
 
 // extern int atoi (const char *);
 %}
@@ -12,18 +15,38 @@
 
 %option yylineno
 
-/* exclusive start conditions -- deal with two types of comments */ 
 %x COMMENT
+DIGIT [0-9]
+LETTER [a-zA-Z]
+PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
+
 %x STAR_COMMENT
 
+/* \"([^\\"\n]|\\\")*\" {  return STRING; } */
+
 %%
-<INITIAL>[0-9]+   { yylval.ival = atoi(yytext); return NUM; }
+<INITIAL>
+"if" { return IF; }
 
-[a-zA-Z][a-zA-Z0-9]*       {  return ID; }
+"int" { return INT; }
+"float" { return FLOAT; }
 
-\"([^\\"\n]|\\\")*\" {  return STRING; }
+"cast<<int>>" { 
+  yylval.data.type = TYPE_INT;
+  return CAST; }
 
-[(){}[\]] { return yytext[0]; }
+"cast<<float>>" { 
+  yylval.data.type = TYPE_FLOAT;
+  return CAST; }
+
+[+-] { yylval.data.value.sval = strdup(yytext); return ADDOP; }
+[*/] { yylval.data.value.sval = strdup(yytext); return MULOP; }
+
+{PUNCTUATIONS} { return yytext[0]; }
+
+{DIGIT}+ { yylval.data.type = TYPE_INT; yylval.data.value.ival = atoi(yytext); return INT; }
+{DIGIT}+"."{DIGIT}* 	{ yylval.data.type = TYPE_FLOAT; yylval.data.value.fval = atof(yytext); return FLOAT; }
+{LETTER}({LETTER}|{DIGIT}|_)*	{ yylval.data.type = TYPE_STRING; yylval.data.value.sval = strdup(yytext); return ID; }
 
 [\t\r ]+  { /* skip white space */ }
 
@@ -34,9 +57,7 @@
 <COMMENT>.+ { /* skip comment */ }
 <COMMENT>\n {  /* end of comment --> resume normal processing */
                 BEGIN (0); }
-
- /*  note: the flex manual contains slightly better code for handling
-   comments. see the section on start conditions */  				
+				
 "/*"  { BEGIN(STAR_COMMENT); }
 				
 <STAR_COMMENT>{
@@ -52,30 +73,3 @@
                                yylineno, yytext[0], yytext[0]); }
 							   
 %%
-
-// int main (int argc, char **argv)
-// {
-//    extern FILE *yyin;
-//    int token;
-
-//    if (argc != 2) {
-//       fprintf(stderr, "Usage: %s <input file name>\n", argv [0]);
-//       exit (1);
-//    }
-
-//    yyin = fopen (argv[1], "r");
-
-//    while ((token = yylex ()) != 0)
-//      switch (token) {
-// 	    case NUM: printf("NUMBER : %d\n", yylval.ival);
-// 	              break;
-//         case ID:     printf ("ID ");
-// 	              break;
-// 	    case STRING: printf ("STRING");
-// 	              break;
-//          default:     fprintf (stderr, "error ... \n"); exit (1);
-//      } 
-//    fclose (yyin);
-//    exit (0);
-// }
-

@@ -1,0 +1,8 @@
+maman 11 mary and miriam/
+cpq
+.vscode/
+cpq.*
+*test*
+lex.yy.c
+!cpq.l
+!cpq.y
