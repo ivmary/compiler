@@ -1,4 +1,4 @@
 compile:
 	bison -d cpq.y
 	flex cpq.l
-	gcc -o cpq lex.yy.c cpq.tab.c -lfl
+	gcc cpq.tab.c lex.yy.c symbol_table.c -I. -lfl -o cpq
