@@ -4,5 +4,8 @@ cpq
 cpq.*
 *test*
 lex.yy.c
+symbol_table
 !cpq.l
 !cpq.y
+!symbol_table.c
+!symbol_table.h

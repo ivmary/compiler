@@ -99,8 +99,12 @@ idlist : idlist ',' ID {
     $$=temp;
 }
 
-stmt : assignment_stmt {}
-| input_stmt
+stmt : assignment_stmt {
+
+}
+| input_stmt {
+
+}
 | output_stmt
 | if_stmt
 | while_stmt
@@ -109,10 +113,29 @@ stmt : assignment_stmt {}
 | stmt_block
 
 assignment_stmt : ID '=' expression ';' {
-
+    printf("temp");
 }
 
-input_stmt : INPUT '(' ID ')' ';'
+input_stmt : INPUT '(' ID ')' ';' {
+    SymbolType idType = $3.type;
+    
+    if(idType == TYPE_ID) {
+        Symbol *id = lookup($3.value.sval);
+        
+        if(id){
+            if(id->type == TYPE_INT) {
+                printf("IINP %s\n",id->name);
+            } else if(id->type == TYPE_FLOAT){
+                printf("RINP %s\n",id->name);
+            }
+        } else {
+            printf("Vaeiable %s is not declared\n",$3.value.sval);
+        }
+    }
+    else {
+        printf("error!\n");
+    }
+}
 
 output_stmt : OUTPUT '(' expression ')' ';'
 
@@ -215,7 +238,7 @@ factor : '(' expression ')' {
     }
   }
 | ID { 
-    $$ = $1;
+    $$.type = $1.type;
     printf("ID: %s\n", $1.value.sval); }
 | INT { 
     $$ = $1;
