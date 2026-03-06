@@ -54,13 +54,6 @@
 %%
 
 program: declarations stmt_block { 
-    // test
-    if ($2.type == TYPE_INT) {
-        printf("Result: %d\n", $2.value.ival);}
-    else if ($2.type == TYPE_FLOAT) {
-        printf("float Result: %f\n", $2.value.fval);}
-    // end test
-
     printf("HALT\n"); // End of program
   }
 
