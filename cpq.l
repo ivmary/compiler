@@ -17,7 +17,7 @@
 
 %x COMMENT
 DIGIT [0-9]
-LETTER [a-zA-Z]
+LETTER [a-z]
 PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 
 %x STAR_COMMENT
