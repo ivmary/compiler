@@ -60,7 +60,7 @@ program: declarations stmt_block {
     else if ($2.type == TYPE_FLOAT) {
         printf("float Result: %f\n", $2.value.fval);}
     // end test
-    printSymbolTable();
+
     printf("HALT\n"); // End of program
   }
 
@@ -137,7 +137,26 @@ input_stmt : INPUT '(' ID ')' ';' {
     }
 }
 
-output_stmt : OUTPUT '(' expression ')' ';'
+output_stmt : OUTPUT '(' expression ')' ';' {
+    SymbolType idType = $3.type;
+    
+    if(idType == TYPE_ID) {
+        Symbol *id = lookup($3.value.sval);
+        
+        if(id){
+            if(id->type == TYPE_INT) {
+                printf("IPRT %s\n",id->name);
+            } else if(id->type == TYPE_FLOAT){
+                printf("RPRT %s\n",id->name);
+            }
+        } else {
+            printf("Vaeiable %s is not declared\n",$3.value.sval);
+        }
+    }
+    else {
+        printf("error!\n");
+    }
+}
 
 if_stmt : IF '(' boolexpr ')' stmt ELSE stmt
 
@@ -238,8 +257,7 @@ factor : '(' expression ')' {
     }
   }
 | ID { 
-    $$.type = $1.type;
-    printf("ID: %s\n", $1.value.sval); }
+    $$.type = $1.type; }
 | INT { 
     $$ = $1;
     printf("NUM: %d\n", $1.value.ival); }
