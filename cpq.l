@@ -28,6 +28,7 @@ PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 <INITIAL>
 "if" { return IF; }
 "input" { return INPUT; }
+"output" { return OUTPUT; }
 
 "int" { return INT; }
 "float" { return FLOAT; }
