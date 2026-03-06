@@ -22,6 +22,7 @@ typedef struct Symbol {
     SymbolType type; 
     char* name;
     SymbolValue value;
+    // TODO: add line number?
     struct Symbol* next;
 } Symbol;
 

@@ -7,21 +7,19 @@
     extern FILE* yyin;
     void yyerror (const char *s);
 
-    
-
 }
 
 %code requires {
     #include "symbol_table.h"
     
-    typedef struct data {
+    typedef struct idData {
         SymbolType type;
         union {
             int ival;
             float fval;
             char* sval;
         } value;
-    } data;
+    } idData;
 
     typedef struct idNamesList {
         char* name;
@@ -31,19 +29,19 @@
 
 %union {
     idNamesList *namesList;
-    data data;
+    idData idData;
 }
 
-%token <data> INT FLOAT ID NUM
+%token <idData> INT FLOAT ID NUM
 %token RELOP ADDOP MULOP
 %token IF ELSE SWITCH CASE BREAK DEFAULT WHILE OUTPUT INPUT 
-%token <data> CAST
+%token <idData> CAST
 %token NOT OR AND
 
 /* %type <ival> stmt_block */
 /* %type <ival> declarations type  */
 %type declarations
-%type <data> program term factor expression declaration type stmt_block
+%type <idData> program term factor expression type
 %type <namesList> idlist
 
 %define parse.error verbose

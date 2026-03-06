@@ -34,21 +34,21 @@ PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 "float" { return FLOAT; }
 
 "cast<<int>>" { 
-  yylval.data.type = TYPE_INT;
+  yylval.idData.type = TYPE_INT;
   return CAST; }
 
 "cast<<float>>" { 
-  yylval.data.type = TYPE_FLOAT;
+  yylval.idData.type = TYPE_FLOAT;
   return CAST; }
 
-[+-] { yylval.data.value.sval = strdup(yytext); return ADDOP; }
-[*/] { yylval.data.value.sval = strdup(yytext); return MULOP; }
+[+-] { yylval.idData.value.sval = strdup(yytext); return ADDOP; }
+[*/] { yylval.idData.value.sval = strdup(yytext); return MULOP; }
 
 {PUNCTUATIONS} { return yytext[0]; }
 
-{DIGIT}+ { yylval.data.type = TYPE_INT; yylval.data.value.ival = atoi(yytext); return INT; }
-{DIGIT}+"."{DIGIT}* 	{ yylval.data.type = TYPE_FLOAT; yylval.data.value.fval = atof(yytext); return FLOAT; }
-{LETTER}({LETTER}|{DIGIT}|_)*	{ yylval.data.type = TYPE_ID; yylval.data.value.sval = strdup(yytext); return ID; }
+{DIGIT}+ { yylval.idData.type = TYPE_INT; yylval.idData.value.ival = atoi(yytext); return INT; }
+{DIGIT}+"."{DIGIT}* 	{ yylval.idData.type = TYPE_FLOAT; yylval.idData.value.fval = atof(yytext); return FLOAT; }
+{LETTER}({LETTER}|{DIGIT}|_)*	{ yylval.idData.type = TYPE_ID; yylval.idData.value.sval = strdup(yytext); return ID; }
 
 [\t\r ]+  { /* skip white space */ }
 
