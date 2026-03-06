@@ -42,8 +42,8 @@
 
 /* %type <ival> stmt_block */
 /* %type <ival> declarations type  */
-
-%type <data> program term factor expression declarations declaration type stmt_block
+%type declarations
+%type <data> program term factor expression declaration type stmt_block
 %type <namesList> idlist
 
 %define parse.error verbose
@@ -65,26 +65,28 @@ program: declarations stmt_block {
   }
 
 declarations : declarations declaration { } 
-| /* epsilon */ 
+| /* epsilon */ {}
 
-declaration : idlist ':' type ';' {
+declaration : idlist ':' type ';' { // Not outputing anything
     idNamesList *temp = $1;
-    while(temp){
-        if($3.type == TYPE_INT) insertInt(TYPE_INT,temp->name,0);
-        else if($3.type == TYPE_FLOAT) insertFloat(TYPE_FLOAT, temp->name, 0);
-        else insertPtr(TYPE_ID, temp->name, NULL);
+
+    while(temp){ // Insert all declared variables with default value
+        if($3.type == TYPE_INT) insertInt(TYPE_INT,temp->name,314);
+        else if($3.type == TYPE_FLOAT) insertFloat(TYPE_FLOAT, temp->name, 3.14);
+        else insertPtr(TYPE_ID, temp->name, NULL); // TODO
         temp = temp-> next;
     }
 
     temp = $1;
-    while(temp){
+    while(temp){ // Free the temporary declaration names list
         idNamesList *toRelease = temp;
         temp = temp->next;
         free(toRelease);
     }
 }
 
-type : INT { $$.type = TYPE_INT; } | FLOAT { $$.type = TYPE_FLOAT; }
+type : INT { $$.type = TYPE_INT; } 
+| FLOAT { $$.type = TYPE_FLOAT; }
 
 idlist : idlist ',' ID {
     idNamesList *temp = malloc(sizeof(idNamesList));
@@ -97,7 +99,7 @@ idlist : idlist ',' ID {
     $$=temp;
 }
 
-stmt : assignment_stmt
+stmt : assignment_stmt {}
 | input_stmt
 | output_stmt
 | if_stmt
@@ -106,7 +108,9 @@ stmt : assignment_stmt
 | break_stmt
 | stmt_block
 
-assignment_stmt : ID '=' expression ';'
+assignment_stmt : ID '=' expression ';' {
+
+}
 
 input_stmt : INPUT '(' ID ')' ';'
 

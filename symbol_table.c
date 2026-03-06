@@ -111,9 +111,9 @@ void cleanSymbolTable(void) {
 }
 
 void printSymbol(Symbol *sym){
-    if(sym->type == TYPE_INT) printf("%d\n",sym->value.i);
-    else if(sym->type == TYPE_FLOAT) printf("%f\n",sym->value.f);
-    else printf("%s\n",sym->value.ptr);
+    if(sym->type == TYPE_INT) printf("int %d\n",sym->value.i);
+    else if(sym->type == TYPE_FLOAT) printf("float %f\n",sym->value.f);
+    else printf("ptr %s\n",sym->value.ptr);
 }
 
 void printSymbolTable(){
