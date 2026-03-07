@@ -23,6 +23,7 @@ typedef struct Symbol {
     char* name;
     SymbolValue value;
     // TODO: add line number?
+    int is_literal; // 1 - if created from NUM, else - 0
     struct Symbol* next;
 } Symbol;
 
@@ -38,5 +39,6 @@ char *newTemp();
 Symbol *createTemp(SymbolType type, SymbolValue value);
 Symbol *convertToFloat(Symbol *x);
 void freeTemporaries();
+void freeIfLiteral(Symbol *sym);
 
 #endif
