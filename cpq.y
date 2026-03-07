@@ -49,7 +49,8 @@
 /* %type <ival> stmt_block */
 /* %type <ival> declarations type  */
 %type declarations
-%type <sym> factor term expression type
+%type <sym> factor term expression 
+%type <type> type
 %type program   
 %type <namesList> idlist
 
@@ -67,14 +68,14 @@ program: declarations stmt_block {
 declarations : declarations declaration { } 
 | /* epsilon */ {}
 
-declaration : idlist ':' type ';' { // Not outputing anything
+declaration : idlist ':' type ';' {
     idNamesList *tempId = $1;
 
     while(tempId){ // Insert all declared variables with default value
-        if($3->type == TYPE_INT) {
+        if($3 == TYPE_INT) {
             Symbol * temp=insertInt(tempId->name,314);
             }
-        else if($3->type == TYPE_FLOAT) {
+        else if($3 == TYPE_FLOAT) {
             Symbol * temp=insertFloat(tempId->name, 3.14);
             }
         else {// TODO
@@ -88,11 +89,10 @@ declaration : idlist ':' type ';' { // Not outputing anything
         idNamesList *toRelease = tempId;
         tempId = tempId->next;
         free(toRelease);
-    }
-}
+}}
 
-type : INT { $$->type = TYPE_INT; } 
-| FLOAT { $$->type = TYPE_FLOAT; }
+type : INT { $$ = TYPE_INT; } 
+| FLOAT { $$ = TYPE_FLOAT; }
 
 idlist : idlist ',' ID {
     idNamesList *temp = malloc(sizeof(idNamesList));
@@ -149,23 +149,14 @@ input_stmt : INPUT '(' ID ')' ';' {
 }
 
 output_stmt : OUTPUT '(' expression ')' ';' {
-    SymbolType idType = $3->type;
-    
-    if(idType == TYPE_ID) {
-        Symbol *id = lookup($3->name);
-        
-        if(id){
-            if(id->type == TYPE_INT) {
-                printf("IPRT %s\n",id->name);
-            } else if(id->type == TYPE_FLOAT){
-                printf("RPRT %s\n",id->name);
-            }
-        } else {
-            printf("Vaeiable %s is not declared\n",$3->name);
+    if($3){
+        if($3->type == TYPE_INT) {
+            printf("IPRT %s\n",$3->name);
+        } else if($3->type == TYPE_FLOAT){
+            printf("RPRT %s\n",$3->name);
         }
-    }
-    else {
-        printf("error!\n");
+    } else {
+        printf("Vaeiable %s is not declared\n",$3->name);
     }
 }
 
@@ -224,7 +215,7 @@ expression : expression ADDOP term {
         $$ = NULL;
     }}
 | term {
-    
+    $$ = $1;
 }
 
 term : term MULOP factor { 
@@ -253,11 +244,12 @@ term : term MULOP factor {
         fprintf(stderr, "Type error: incompatible types for term\n");
         $$ = NULL;
     }}
-| factor
+| factor {
+    $$ = $1;
+}
 
 factor : '(' expression ')' {
-    $$ = $2;
-}
+    $$ = $2;}
 | CAST '(' expression ')' { 
     if ($3->type != TYPE_INT && $3->type != TYPE_FLOAT) {
         $$ = NULL;   /* type error */
