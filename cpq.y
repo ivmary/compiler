@@ -104,7 +104,25 @@ stmt : assignment_stmt {
 | stmt_block
 
 assignment_stmt : ID '=' expression ';' {
-    printf("temp");
+    SymbolType idType = $1.type;
+    
+    if(idType == TYPE_ID) {
+        Symbol *id = lookup($1.value.sval);
+
+        if(id && id->type == $3.type){ // Checking if the vaeiable exists and if we try to assign the correct type
+            if(id->type == TYPE_INT) {
+                printf("IASN %s %d\n",id->name,$3.value.ival);
+            } else if(id->type == TYPE_FLOAT) {
+                printf("RASN %s %f\n",id->name,$3.value.fval);
+            } else {
+                printf("error\n"); // Trying to assing unsupported type
+            }
+        } else {
+            printf("error\n");
+        }
+    } else {
+        printf("error\n");
+    }
 }
 
 input_stmt : INPUT '(' ID ')' ';' {
@@ -250,11 +268,11 @@ factor : '(' expression ')' {
 | ID { 
     $$.type = $1.type; }
 | INT { 
-    $$ = $1;
-    printf("NUM: %d\n", $1.value.ival); }
+    $$.type = TYPE_INT;
+    $$.value.ival = $1.value.ival; }
 | FLOAT { 
-    $$ = $1;
-    printf("NUM: %f\n", $1.value.fval); }
+    $$.type = TYPE_FLOAT;
+    $$.value.fval = $1.value.fval; }
 
 %%
 
