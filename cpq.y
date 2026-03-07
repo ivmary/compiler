@@ -196,11 +196,15 @@ expression : expression ADDOP term {
         SymbolValue dummy = (SymbolValue){0};
         Symbol *res = createTemp(resType, dummy);
 
-        if (resType == TYPE_FLOAT) {            
-            if($2 == '+') {
-                printf("RADD %s %s %s\n",res->name,$1->name,$3->name);
+        if (resType == TYPE_FLOAT) {      
+            Symbol *first = convertToFloat($1);      
+            Symbol *second = convertToFloat($3);      
+            if (!first || !second) {
+                $$ = NULL;
+            } else if($2 == '+') {
+                printf("RADD %s %s %s\n",res->name,first->name,second->name);
             } else if($2 == '-'){
-                printf("RSUB %s %s %s\n",res->name,$1->name,$3->name);
+                printf("RSUB %s %s %s\n",res->name,first->name,second->name);
             }
         } else { 
             if($2 == '+') {
@@ -226,8 +230,12 @@ term : term MULOP factor {
         SymbolValue dummy = (SymbolValue){0};
         Symbol *res = createTemp(resType, dummy);
 
-        if (resType == TYPE_FLOAT) {            
-            if($2 == '*') {
+        if (resType == TYPE_FLOAT) { 
+            Symbol *first = convertToFloat($1);      
+            Symbol *second = convertToFloat($3);      
+            if (!first || !second) {
+                $$ = NULL;
+            } else if($2 == '*') {
                 printf("RMLT %s %s %s\n",res->name,$1->name,$3->name);
             } else if($2 == '/'){
                 printf("RDIV %s %s %s\n",res->name,$1->name,$3->name);
