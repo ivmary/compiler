@@ -133,21 +133,12 @@ Symbol *createTemp(SymbolType type, SymbolValue value){
     return temp;
 }
 
-// void printSymbol(Symbol *sym){
-//     if(sym->type == TYPE_INT) printf("int %d\n",sym->value.i);
-//     else if(sym->type == TYPE_FLOAT) printf("float %f\n",sym->value.f);
-//     else printf("ptr %s\n",sym->value.ptr);
-// }
+Symbol *convertToFloat(Symbol *x) {
+    if (!x) return NULL;
+    if (x->type == TYPE_FLOAT) return x;
 
-// void printSymbolTable(){
-//     for(int i=0;i<TABLE_SIZE;i++){
-//         if(symbolTable[i]){
-//             Symbol *temp = symbolTable[i];
-//             while(temp){
-//                 printf("symbol: ");
-//                 printSymbol(temp);
-//                 temp=temp->next;
-//             }
-//         }
-//     }
-// }
+    SymbolValue dummy = (SymbolValue){0};
+    Symbol *t = createTemp(TYPE_FLOAT, dummy);
+    printf("ITOR %s %s\n", t->name, x->name);
+    return t;
+}
