@@ -298,12 +298,26 @@ factor : '(' expression ')' {
     free($1);
 }
 | NUM { 
-    $$.type = $1.type;
-    if($1.type == TYPE_INT) {
-        $$.value.ival = $1.value.ival; }
-    else if($1.type == TYPE_FLOAT) {
-        $$.value.fval = $1.value.fval;
+    Symbol *num = malloc(sizeof(Symbol));
+
+    num->type = $1.type;
+    num->next = NULL;
+
+    if (num->type == TYPE_INT) {
+        num->value.i = $1.value.ival;
+
+        char buf[32];
+        snprintf(buf, sizeof(buf), "%d", num->value.i);
+        num->name = strdup(buf);
+    } else { /* TYPE_FLOAT */
+        num->value.f = $1.value.fval;
+
+        char buf[64];
+        snprintf(buf, sizeof(buf), "%g", num->value.f);
+        num->name = strdup(buf);
     }
+
+    $$ = num;
 }
 
 %%
