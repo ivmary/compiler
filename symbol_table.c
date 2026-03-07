@@ -7,6 +7,8 @@
 
 Symbol* symbolTable[TABLE_SIZE];
 
+int tempCount = 1;
+
 // Hash function
 uint32_t hash(const char *s) {
     uint32_t h = 5381;
@@ -25,7 +27,7 @@ void initSymbolTable(void){
     }
 }
 
-void insertSymbol(SymbolType type, char* name, SymbolValue value){
+Symbol *insertSymbol(SymbolType type, char* name, SymbolValue value){
     Symbol *newSymbol = malloc(sizeof(Symbol));
 
     newSymbol->name = strdup(name); // Copy name into the newly created Symbol
@@ -38,24 +40,26 @@ void insertSymbol(SymbolType type, char* name, SymbolValue value){
 
     newSymbol->next = symbolTable[hashed];
     symbolTable[hashed] = newSymbol;
+
+    return newSymbol;
 }
 
-void insertInt(SymbolType type, char* name, int value){
+Symbol *insertInt(char* name, int value){
     SymbolValue val;
     val.i = value;
-    insertSymbol(type,name,val);
+    return insertSymbol(TYPE_INT,name,val);
 }
 
-void insertFloat(SymbolType type, char* name, float value) {
+Symbol *insertFloat(char* name, float value) {
     SymbolValue val;
     val.f = value;
-    insertSymbol(type,name,val);
+    return insertSymbol(TYPE_FLOAT,name,val);
 }
 
-void insertPtr(SymbolType type, char* name, void* value) {
+Symbol *insertPtr(char* name, void* value) {
     SymbolValue val;
     val.ptr = value;
-    insertSymbol(type,name,val);
+    return insertSymbol(TYPE_ID,name,val);
 }
 
 Symbol *lookup(char* name) {
@@ -108,6 +112,32 @@ void cleanSymbolTable(void) {
             temp = next;
         }
     }
+}
+
+char *newTemp(){
+    char buffer[32];
+
+    snprintf(buffer, "_t%d", tempCount++);
+
+    return strdup(buffer);
+}
+
+Symbol *createTemp(SymbolType type, SymbolValue value){
+    char *tempName = newTemp();
+
+    return insertSymbol(type,tempName,value);
+}
+
+Symbol *createTempInt(int value){
+    SymbolValue newVal;
+    newVal.i = value;
+    return createTemp(TYPE_INT, newVal);
+}
+
+Symbol *createTempFloat(float value){
+    SymbolValue newVal;
+    newVal.f = value;
+    return createTemp(TYPE_FLOAT, newVal);
 }
 
 // void printSymbol(Symbol *sym){

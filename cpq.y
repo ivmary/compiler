@@ -59,19 +59,25 @@ declarations : declarations declaration { }
 | /* epsilon */ {}
 
 declaration : idlist ':' type ';' { // Not outputing anything
-    idNamesList *temp = $1;
+    idNamesList *tempId = $1;
 
-    while(temp){ // Insert all declared variables with default value
-        if($3.type == TYPE_INT) insertInt(TYPE_INT,temp->name,314);
-        else if($3.type == TYPE_FLOAT) insertFloat(TYPE_FLOAT, temp->name, 3.14);
-        else insertPtr(TYPE_ID, temp->name, NULL); // TODO
-        temp = temp-> next;
+    while(tempId){ // Insert all declared variables with default value
+        if($3.type == TYPE_INT) {
+            Symbol * temp=insertInt(tempId->name,314);
+            }
+        else if($3.type == TYPE_FLOAT) {
+            Symbol * temp=insertFloat(tempId->name, 3.14);
+            }
+        else {// TODO
+            Symbol * temp=insertPtr(tempId->name, NULL);
+            } 
+        tempId = tempId-> next;
     }
 
-    temp = $1;
-    while(temp){ // Free the temporary declaration names list
-        idNamesList *toRelease = temp;
-        temp = temp->next;
+    tempId = $1;
+    while(tempId){ // Free the temporary declaration names list
+        idNamesList *toRelease = tempId;
+        tempId = tempId->next;
         free(toRelease);
     }
 }
@@ -250,21 +256,23 @@ factor : '(' expression ')' {
     if ($3.type != TYPE_INT && $3.type != TYPE_FLOAT) {
         $$.type = -1;   /* type error */
     }
-    else if ($1.type == TYPE_INT) {
+    else if ($1.type == TYPE_INT) { // Cast to INT
         $$.type = TYPE_INT;
 
         if ($3.type == TYPE_INT)
             $$.value.ival = $3.value.ival;
         else
             $$.value.ival = (int)$3.value.fval;
+        printf("RTOI \n");
     }
-    else { /* TYPE_FLOAT */
+    else { /* Cast to FLOAT */
         $$.type = TYPE_FLOAT;
 
         if ($3.type == TYPE_INT)
             $$.value.fval = (float)$3.value.ival;
         else
             $$.value.fval = $3.value.fval;
+        printf("ITOR \n");
     }
   }
 | ID { 

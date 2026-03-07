@@ -27,13 +27,16 @@ typedef struct Symbol {
 } Symbol;
 
 void initSymbolTable(void);
-void insertSymbol(SymbolType type, char* name, SymbolValue value);
-void insertInt(SymbolType type, char* name, int value);
-void insertFloat(SymbolType type, char* name, float value);
-void insertPtr(SymbolType type, char* name, void* value);
+Symbol *insertSymbol(SymbolType type, char* name, SymbolValue value);
+Symbol *insertInt(char* name, int value);
+Symbol *insertFloat(char* name, float value);
+Symbol *insertPtr(char* name, void* value);
 Symbol *lookup(char* name);
 void removeSymbol (char* name);
 void cleanSymbolTable(void);
+Symbol *createTemp(SymbolType type, SymbolValue value);
+Symbol *createTempInt(int value);
+Symbol *createTempFloat(float value);
 
 // remove
 //     void printSymbolTable();
