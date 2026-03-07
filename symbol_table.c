@@ -7,7 +7,7 @@
 
 Symbol* symbolTable[TABLE_SIZE];
 
-int tempCount = 1;
+int tempCount = 0;
 
 // Hash function
 uint32_t hash(const char *s) {
