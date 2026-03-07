@@ -36,5 +36,5 @@ void removeSymbol (char* name);
 void cleanSymbolTable(void);
 
 // remove
-    void printSymbolTable();
+//     void printSymbolTable();
 #endif
