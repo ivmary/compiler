@@ -133,18 +133,6 @@ Symbol *createTemp(SymbolType type, SymbolValue value){
     return temp;
 }
 
-Symbol *createTempInt(int value){
-    SymbolValue newVal;
-    newVal.i = value;
-    return createTemp(TYPE_INT, newVal);
-}
-
-Symbol *createTempFloat(float value){
-    SymbolValue newVal;
-    newVal.f = value;
-    return createTemp(TYPE_FLOAT, newVal);
-}
-
 // void printSymbol(Symbol *sym){
 //     if(sym->type == TYPE_INT) printf("int %d\n",sym->value.i);
 //     else if(sym->type == TYPE_FLOAT) printf("float %f\n",sym->value.f);

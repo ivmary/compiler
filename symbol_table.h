@@ -34,10 +34,8 @@ Symbol *insertPtr(char* name, void* value);
 Symbol *lookup(char* name);
 void removeSymbol (char* name);
 void cleanSymbolTable(void);
-Symbol *createTemp(SymbolType type, SymbolValue value);
-Symbol *createTempInt(int value);
-Symbol *createTempFloat(float value);
 char *newTemp();
+Symbol *createTemp(SymbolType type, SymbolValue value);
 
 // remove
 //     void printSymbolTable();
