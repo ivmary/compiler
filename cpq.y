@@ -12,7 +12,7 @@
 %code requires {
     #include "symbol_table.h"
     
-    typedef struct idData {
+    typedef struct NumData {
         SymbolType type;
         union {
             int ival;
@@ -33,8 +33,8 @@
     float fval;
     NumData num;
     idNamesList *namesList;
-    idData idData;
     char op;
+    SymbolType type;
 }
 
 %token <sval> ID
@@ -43,14 +43,14 @@
 %token RELOP 
 %token <op> ADDOP MULOP
 %token IF ELSE SWITCH CASE BREAK DEFAULT WHILE OUTPUT INPUT 
-%token <idData> CAST
+%token <type> CAST
 %token NOT OR AND
 
 /* %type <ival> stmt_block */
 /* %type <ival> declarations type  */
 %type declarations
-%type <sym> factor term
-%type <idData> program  expression type
+%type <sym> factor term expression type
+%type program   
 %type <namesList> idlist
 
 %define parse.error verbose
@@ -71,10 +71,10 @@ declaration : idlist ':' type ';' { // Not outputing anything
     idNamesList *tempId = $1;
 
     while(tempId){ // Insert all declared variables with default value
-        if($3.type == TYPE_INT) {
+        if($3->type == TYPE_INT) {
             Symbol * temp=insertInt(tempId->name,314);
             }
-        else if($3.type == TYPE_FLOAT) {
+        else if($3->type == TYPE_FLOAT) {
             Symbol * temp=insertFloat(tempId->name, 3.14);
             }
         else {// TODO
@@ -91,17 +91,17 @@ declaration : idlist ':' type ';' { // Not outputing anything
     }
 }
 
-type : INT { $$.type = TYPE_INT; } 
-| FLOAT { $$.type = TYPE_FLOAT; }
+type : INT { $$->type = TYPE_INT; } 
+| FLOAT { $$->type = TYPE_FLOAT; }
 
 idlist : idlist ',' ID {
     idNamesList *temp = malloc(sizeof(idNamesList));
-    temp->name = strdup($3.value.sval);
+    temp->name = strdup($3);
     temp->next = $1;
     $$ = temp;
 }| ID {
     idNamesList *temp = malloc(sizeof(idNamesList));
-    temp->name = strdup($1.value.sval);
+    temp->name = strdup($1);
     $$=temp;
 }
 
@@ -119,21 +119,15 @@ stmt : assignment_stmt {
 | stmt_block
 
 assignment_stmt : ID '=' expression ';' {
-    SymbolType idType = $1.type;
-    
-    if(idType == TYPE_ID) {
-        Symbol *id = lookup($1.value.sval);
+    Symbol *id = lookup($1);
 
-        if(id && id->type == $3.type){ // Checking if the vaeiable exists and if we try to assign the correct type
-            if(id->type == TYPE_INT) {
-                printf("IASN %s %d\n",id->name,$3.value.ival);
-            } else if(id->type == TYPE_FLOAT) {
-                printf("RASN %s %f\n",id->name,$3.value.fval);
-            } else {
-                printf("error\n"); // Trying to assing unsupported type
-            }
+    if(id && id->type == $3->type){
+        if(id->type == TYPE_INT) {
+            printf("IASN %s %s\n",id->name,$3->name);
+        } else if(id->type == TYPE_FLOAT) {
+            printf("RASN %s %s\n",id->name,$3->name);
         } else {
-            printf("error\n");
+            printf("error\n"); // Trying to assing unsupported type
         }
     } else {
         printf("error\n");
@@ -141,19 +135,12 @@ assignment_stmt : ID '=' expression ';' {
 }
 
 input_stmt : INPUT '(' ID ')' ';' {
-    SymbolType idType = $3.type;
-    
-    if(idType == TYPE_ID) {
-        Symbol *id = lookup($3.value.sval);
-        
-        if(id){
-            if(id->type == TYPE_INT) {
-                printf("IINP %s\n",id->name);
-            } else if(id->type == TYPE_FLOAT){
-                printf("RINP %s\n",id->name);
-            }
-        } else {
-            printf("Vaeiable %s is not declared\n",$3.value.sval);
+    Symbol *id = lookup($3);
+    if(id) {
+        if(id->type == TYPE_INT) {
+            printf("IINP %s\n",id->name);
+        } else if(id->type == TYPE_FLOAT){
+            printf("RINP %s\n",id->name);
         }
     }
     else {
@@ -162,10 +149,10 @@ input_stmt : INPUT '(' ID ')' ';' {
 }
 
 output_stmt : OUTPUT '(' expression ')' ';' {
-    SymbolType idType = $3.type;
+    SymbolType idType = $3->type;
     
     if(idType == TYPE_ID) {
-        Symbol *id = lookup($3.value.sval);
+        Symbol *id = lookup($3->name);
         
         if(id){
             if(id->type == TYPE_INT) {
@@ -174,7 +161,7 @@ output_stmt : OUTPUT '(' expression ')' ';' {
                 printf("RPRT %s\n",id->name);
             }
         } else {
-            printf("Vaeiable %s is not declared\n",$3.value.sval);
+            printf("Vaeiable %s is not declared\n",$3->name);
         }
     }
     else {
@@ -211,30 +198,36 @@ boolfactor : NOT '(' boolexpr ')'
 
 
 expression : expression ADDOP term { 
-    if (($1.type == TYPE_INT || $1.type == TYPE_FLOAT) && 
-        ($3.type == TYPE_INT || $3.type == TYPE_FLOAT)) {
-        if ($1.type == TYPE_FLOAT || $3.type == TYPE_FLOAT) {
-            $$.type = TYPE_FLOAT;
+    if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+        ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
 
-            float first  = ($1.type == TYPE_FLOAT) ? $1.value.fval : $1.value.ival;
-            float second = ($3.type == TYPE_FLOAT) ? $3.value.fval : $3.value.ival;
+        SymbolType resType = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+        SymbolValue dummy = (SymbolValue){0};
+        Symbol *res = createTemp(resType, dummy);
 
-            $$.value.fval = first + second;
-        } else {
-            $$.type = TYPE_INT;
-            $$.value.ival = $1.value.ival + $3.value.ival;
+        if (resType == TYPE_FLOAT) {            
+            if($2 == '+') {
+                printf("RADD %s %s %s\n",res->name,$1->name,$3->name);
+            } else if($2 == '-'){
+                printf("RSUB %s %s %s\n",res->name,$1->name,$3->name);
+            }
+        } else { 
+            if($2 == '+') {
+                printf("IADD %s %s %s\n",res->name,$1->name,$3->name);
+            } else if($2 == '-'){
+                printf("ISUB %s %s %s\n",res->name,$1->name,$3->name);
+            }    
         }
+        $$ = res;
     } else {
-        fprintf(stderr, "Type error: incompatible types for addition\n");
-        $$.type = -1; // Indicate an error
-    }
-  }
+        fprintf(stderr, "Type error: incompatible types for term\n");
+        $$ = NULL;
+    }}
 | term {
     
 }
 
 term : term MULOP factor { 
-  
     if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
         ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
 
@@ -259,43 +252,38 @@ term : term MULOP factor {
     } else {
         fprintf(stderr, "Type error: incompatible types for term\n");
         $$ = NULL;
-    }
-
-  }
+    }}
 | factor
 
 factor : '(' expression ')' {
-    if ($2.type == TYPE_INT) {
-            $$.type = TYPE_INT;
-            $$.value.ival = $2.value.ival;
-    } else if ($2.type == TYPE_FLOAT) {
-        $$.type = TYPE_FLOAT;
-        $$. value.fval = $2.value.fval;
-    }
+    // if ($2->type == TYPE_INT) {
+    //         $$->type = TYPE_INT;
+    //         $$.value.ival = $2.value.ival;
+    // } else if ($2.type == TYPE_FLOAT) {
+    //     $$.type = TYPE_FLOAT;
+    //     $$. value.fval = $2.value.fval;
+    // }
 }
 | CAST '(' expression ')' { 
-    if ($3.type != TYPE_INT && $3.type != TYPE_FLOAT) {
-        $$.type = -1;   /* type error */
+    if ($3->type != TYPE_INT && $3->type != TYPE_FLOAT) {
+        $$ = NULL;   /* type error */
     }
-    else if ($1.type == TYPE_INT) { // Cast to INT
-        $$.type = TYPE_INT;
+    else{
+        Symbol *res = NULL;
 
-        if ($3.type == TYPE_INT)
-            $$.value.ival = $3.value.ival;
-        else
-            $$.value.ival = (int)$3.value.fval;
-        printf("RTOI \n");
-    }
-    else { /* Cast to FLOAT */
-        $$.type = TYPE_FLOAT;
+        if ($1 == TYPE_INT) { // Cast to INT
+            res = createTemp(TYPE_INT,$3->value);
+            
+            printf("RTOI %s %s\n",res->name,$3->name);
+        }
+        else { /* Cast to FLOAT */
+            res = createTemp(TYPE_FLOAT,$3->value);
 
-        if ($3.type == TYPE_INT)
-            $$.value.fval = (float)$3.value.ival;
-        else
-            $$.value.fval = $3.value.fval;
-        printf("ITOR \n");
-    }
-  }
+            printf("ITOR %s %s\n",res->name,$3->name);
+        }
+
+        $$ = res;
+    }}
 | ID { 
     Symbol *id = lookup($1);
     if(id) {
@@ -305,8 +293,7 @@ factor : '(' expression ')' {
         printf("undeclared identifier\n"); // TODO: error
         $$ = NULL;
     }
-    free($1);
-}
+    free($1); }
 | NUM { 
     Symbol *num = malloc(sizeof(Symbol));
 
@@ -327,8 +314,7 @@ factor : '(' expression ')' {
         num->name = strdup(buf);
     }
 
-    $$ = num;
-}
+    $$ = num; }
 
 %%
 

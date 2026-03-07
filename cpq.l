@@ -34,11 +34,11 @@ PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 "float" { return FLOAT; }
 
 "cast<<int>>" { 
-  yylval.idData.type = TYPE_INT;
+  yylval.type = TYPE_INT;
   return CAST; }
 
 "cast<<float>>" { 
-  yylval.idData.type = TYPE_FLOAT;
+  yylval.type = TYPE_FLOAT;
   return CAST; }
 
 [+-] { yylval.op = yytext[0]; return ADDOP; }
