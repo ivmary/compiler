@@ -7,7 +7,7 @@
 
 Symbol* symbolTable[TABLE_SIZE];
 
-Symbol* temporaries = NULL;
+IRSymNode* IRSymTable = NULL;
 
 int tempCount = 0;
 
@@ -37,7 +37,6 @@ Symbol *insertSymbol(SymbolType type, char* name, SymbolValue value){
     newSymbol->type=type; // Assign type
 
     newSymbol->value = value;
-    newSymbol->is_literal = 0;
 
     size_t hashed = hash(name);
 
@@ -131,9 +130,8 @@ Symbol *createTemp(SymbolType type, SymbolValue value){
     temp->name = newTemp();
     temp->type = type;
     temp->value = value;
-    temp->is_literal = 0;
-    temp->next = temporaries;
-    temporaries = temp;
+    
+    addIRSym(temp);
 
     return temp;
 }
@@ -148,21 +146,26 @@ Symbol *convertToFloat(Symbol *x) {
     return t;
 }
 
-void freeTemporaries() {
-    Symbol *temp = temporaries;
-    while(temp){
-        Symbol* nextTemp = temp->next;
-        free(temp->name);
-        free(temp);
-        temp = nextTemp;
-    }
+void addIRSym(Symbol *sym){
+    IRSymNode *newNode = malloc(sizeof(IRSymNode));
 
-    temporaries = NULL;
+    newNode->sym = sym;
+    newNode->next = IRSymTable;
+    IRSymTable = newNode;
 }
 
-void freeIfLiteral(Symbol *sym) {
-    if(sym && sym->is_literal) {
-        free(sym->name);
-        free(sym);
+void freeTemporaries() {
+    IRSymNode *n = IRSymTable;
+    while(n){
+        IRSymNode* nextN = n->next;
+
+        if(n->sym){
+            free(n->sym->name);
+            free(n->sym);
+        }
+        free(n);
+        n = nextN;
     }
+
+    IRSymTable = NULL;
 }

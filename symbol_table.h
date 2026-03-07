@@ -27,6 +27,11 @@ typedef struct Symbol {
     struct Symbol* next;
 } Symbol;
 
+typedef struct IRSymNode {
+    Symbol *sym;
+    struct IRSymNode *next;
+} IRSymNode;
+
 void initSymbolTable(void);
 Symbol *insertSymbol(SymbolType type, char* name, SymbolValue value);
 Symbol *insertInt(char* name, int value);
@@ -39,6 +44,6 @@ char *newTemp();
 Symbol *createTemp(SymbolType type, SymbolValue value);
 Symbol *convertToFloat(Symbol *x);
 void freeTemporaries();
-void freeIfLiteral(Symbol *sym);
+void addIRSym(Symbol *sym);
 
 #endif

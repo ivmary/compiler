@@ -307,7 +307,8 @@ factor : '(' expression ')' {
         snprintf(buf, sizeof(buf), "%g", num->value.f);
         num->name = strdup(buf);
     }
-
+    
+    addIRSym(num);
     $$ = num; }
 
 %%
@@ -329,7 +330,10 @@ int main(int argc, char **argv){
     yyparse ();
     
     fclose (yyin);
+
     cleanSymbolTable();
+    freeTemporaries();
+
     return 0;
 }
 
