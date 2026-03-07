@@ -17,9 +17,8 @@
         union {
             int ival;
             float fval;
-            char* sval;
         } value;
-    } idData;
+    } NumData;
 
     typedef struct idNamesList {
         char* name;
@@ -28,11 +27,18 @@
 }
 
 %union {
+    Symbol *sym;
+    char *sval;
+    int ival;
+    float fval;
+    NumData num;
     idNamesList *namesList;
     idData idData;
 }
 
-%token <idData> INT FLOAT ID NUM
+%token <sval> ID
+%token <num> NUM
+%token INT FLOAT 
 %token RELOP ADDOP MULOP
 %token IF ELSE SWITCH CASE BREAK DEFAULT WHILE OUTPUT INPUT 
 %token <idData> CAST
@@ -41,7 +47,8 @@
 /* %type <ival> stmt_block */
 /* %type <ival> declarations type  */
 %type declarations
-%type <idData> program term factor expression type
+%type <sym> factor
+%type <idData> program term expression type
 %type <namesList> idlist
 
 %define parse.error verbose
@@ -220,19 +227,23 @@ expression : expression ADDOP term {
         $$.type = -1; // Indicate an error
     }
   }
-| term
+| term {
+    
+}
 
 term : term MULOP factor { 
     if (($1.type == TYPE_INT || $1.type == TYPE_FLOAT) && 
         ($3.type == TYPE_INT || $3.type == TYPE_FLOAT)) {
         if ($1.type == TYPE_FLOAT || $3.type == TYPE_FLOAT) {
-            $$.type = TYPE_FLOAT;
-
             float first  = ($1.type == TYPE_FLOAT) ? $1.value.fval : (float)$1.value.ival;
             float second = ($3.type == TYPE_FLOAT) ? $3.value.fval : (float)$3.value.ival;
 
+            Symbol *temp = createTempFloat(first*second);
+            $$.type = TYPE_FLOAT;
             $$.value.fval = first * second;
+            printf("RADD %s\n",temp->name);
         } else {
+            printf("IADD \n");
             $$.type = TYPE_INT;
             $$.value.ival = $1.value.ival * $3.value.ival;
         }
@@ -249,7 +260,7 @@ factor : '(' expression ')' {
             $$.value.ival = $2.value.ival;
     } else if ($2.type == TYPE_FLOAT) {
         $$.type = TYPE_FLOAT;
-        $$.value.fval = $2.value.fval;
+        $$. value.fval = $2.value.fval;
     }
 }
 | CAST '(' expression ')' { 
@@ -276,7 +287,16 @@ factor : '(' expression ')' {
     }
   }
 | ID { 
-    $$.type = $1.type; }
+    Symbol *id = lookup($1);
+    if(id) {
+        $$ = id;
+    }
+    else {
+        printf("undeclared identifier\n"); // TODO: error
+        $$ = NULL;
+    }
+    free($1);
+}
 | NUM { 
     $$.type = $1.type;
     if($1.type == TYPE_INT) {
