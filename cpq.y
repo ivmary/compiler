@@ -167,7 +167,9 @@ output_stmt : OUTPUT '(' expression ')' ';' {
     }
 }
 
-if_stmt : IF '(' boolexpr ')' stmt ELSE stmt
+if_stmt : IF '(' boolexpr ')' stmt ELSE stmt {
+
+}
 
 while_stmt : WHILE '(' boolexpr ')' stmt
 
@@ -267,12 +269,14 @@ factor : '(' expression ')' {
   }
 | ID { 
     $$.type = $1.type; }
-| INT { 
-    $$.type = TYPE_INT;
-    $$.value.ival = $1.value.ival; }
-| FLOAT { 
-    $$.type = TYPE_FLOAT;
-    $$.value.fval = $1.value.fval; }
+| NUM { 
+    $$.type = $1.type;
+    if($1.type == TYPE_INT) {
+        $$.value.ival = $1.value.ival; }
+    else if($1.type == TYPE_FLOAT) {
+        $$.value.fval = $1.value.fval;
+    }
+}
 
 %%
 

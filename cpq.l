@@ -46,8 +46,8 @@ PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 
 {PUNCTUATIONS} { return yytext[0]; }
 
-{DIGIT}+ { yylval.idData.type = TYPE_INT; yylval.idData.value.ival = atoi(yytext); return INT; }
-{DIGIT}+"."{DIGIT}* 	{ yylval.idData.type = TYPE_FLOAT; yylval.idData.value.fval = atof(yytext); return FLOAT; }
+{DIGIT}+ { yylval.idData.type = TYPE_INT; yylval.idData.value.ival = atoi(yytext); return NUM; }
+{DIGIT}+"."{DIGIT}* 	{ yylval.idData.type = TYPE_FLOAT; yylval.idData.value.fval = atof(yytext); return NUM; }
 ({LETTER}|_)({LETTER}|{DIGIT}|_)*	{ yylval.idData.type = TYPE_ID; yylval.idData.value.sval = strdup(yytext); return ID; }
 
 [\t\r ]+  { /* skip white space */ }
