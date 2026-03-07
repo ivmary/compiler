@@ -256,13 +256,7 @@ term : term MULOP factor {
 | factor
 
 factor : '(' expression ')' {
-    // if ($2->type == TYPE_INT) {
-    //         $$->type = TYPE_INT;
-    //         $$.value.ival = $2.value.ival;
-    // } else if ($2.type == TYPE_FLOAT) {
-    //     $$.type = TYPE_FLOAT;
-    //     $$. value.fval = $2.value.fval;
-    // }
+    $$ = $2;
 }
 | CAST '(' expression ')' { 
     if ($3->type != TYPE_INT && $3->type != TYPE_FLOAT) {
