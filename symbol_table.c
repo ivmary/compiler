@@ -117,15 +117,20 @@ void cleanSymbolTable(void) {
 char *newTemp(){
     char buffer[32];
 
-    snprintf(buffer, "_t%d", tempCount++);
+    snprintf(buffer, sizeof(buffer), "_t%d", tempCount++);
 
     return strdup(buffer);
 }
 
 Symbol *createTemp(SymbolType type, SymbolValue value){
-    char *tempName = newTemp();
+    Symbol *temp = malloc(sizeof(Symbol));
 
-    return insertSymbol(type,tempName,value);
+    temp->name = newTemp();
+    temp->type = type;
+    temp->value = value;
+    temp->next = NULL;
+
+    return temp;
 }
 
 Symbol *createTempInt(int value){

@@ -41,8 +41,8 @@ PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
   yylval.idData.type = TYPE_FLOAT;
   return CAST; }
 
-[+-] { yylval.idData.value.sval = strdup(yytext); return ADDOP; }
-[*/] { yylval.idData.value.sval = strdup(yytext); return MULOP; }
+[+-] { yylval.op = yytext[0]; return ADDOP; }
+[*/] { yylval.op = yytext[0]; return MULOP; }
 
 {PUNCTUATIONS} { return yytext[0]; }
 

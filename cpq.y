@@ -34,12 +34,14 @@
     NumData num;
     idNamesList *namesList;
     idData idData;
+    char op;
 }
 
 %token <sval> ID
 %token <num> NUM
 %token INT FLOAT 
-%token RELOP ADDOP MULOP
+%token RELOP 
+%token <op> ADDOP MULOP
 %token IF ELSE SWITCH CASE BREAK DEFAULT WHILE OUTPUT INPUT 
 %token <idData> CAST
 %token NOT OR AND
@@ -47,8 +49,8 @@
 /* %type <ival> stmt_block */
 /* %type <ival> declarations type  */
 %type declarations
-%type <sym> factor
-%type <idData> program term expression type
+%type <sym> factor term
+%type <idData> program  expression type
 %type <namesList> idlist
 
 %define parse.error verbose
@@ -232,25 +234,33 @@ expression : expression ADDOP term {
 }
 
 term : term MULOP factor { 
-    if (($1.type == TYPE_INT || $1.type == TYPE_FLOAT) && 
-        ($3.type == TYPE_INT || $3.type == TYPE_FLOAT)) {
-        if ($1.type == TYPE_FLOAT || $3.type == TYPE_FLOAT) {
-            float first  = ($1.type == TYPE_FLOAT) ? $1.value.fval : (float)$1.value.ival;
-            float second = ($3.type == TYPE_FLOAT) ? $3.value.fval : (float)$3.value.ival;
+  
+    if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+        ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) {
 
-            Symbol *temp = createTempFloat(first*second);
-            $$.type = TYPE_FLOAT;
-            $$.value.fval = first * second;
-            printf("RADD %s\n",temp->name);
-        } else {
-            printf("IADD \n");
-            $$.type = TYPE_INT;
-            $$.value.ival = $1.value.ival * $3.value.ival;
+        SymbolType resType = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT) ? TYPE_FLOAT : TYPE_INT;
+        SymbolValue dummy = (SymbolValue){0};
+        Symbol *res = createTemp(resType, dummy);
+
+        if (resType == TYPE_FLOAT) {            
+            if($2 == '*') {
+                printf("RMLT %s %s %s\n",res->name,$1->name,$3->name);
+            } else if($2 == '/'){
+                printf("RDIV %s %s %s\n",res->name,$1->name,$3->name);
+            }
+        } else { 
+            if($2 == '*') {
+                printf("IMLT %s %s %s\n",res->name,$1->name,$3->name);
+            } else if($2 == '/'){
+                printf("IDIV %s %s %s\n",res->name,$1->name,$3->name);
+            }    
         }
+        $$ = res;
     } else {
-        fprintf(stderr, "Type error: incompatible types for addition\n");
-        $$.type = -1; // Indicate an error
+        fprintf(stderr, "Type error: incompatible types for term\n");
+        $$ = NULL;
     }
+
   }
 | factor
 

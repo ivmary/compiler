@@ -37,6 +37,7 @@ void cleanSymbolTable(void);
 Symbol *createTemp(SymbolType type, SymbolValue value);
 Symbol *createTempInt(int value);
 Symbol *createTempFloat(float value);
+char *newTemp();
 
 // remove
 //     void printSymbolTable();
