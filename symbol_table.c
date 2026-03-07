@@ -7,6 +7,8 @@
 
 Symbol* symbolTable[TABLE_SIZE];
 
+Symbol* temporaries = NULL;
+
 int tempCount = 0;
 
 // Hash function
@@ -141,4 +143,14 @@ Symbol *convertToFloat(Symbol *x) {
     Symbol *t = createTemp(TYPE_FLOAT, dummy);
     printf("ITOR %s %s\n", t->name, x->name);
     return t;
+}
+
+void freeTemporaries() {
+    Symbol *temp = temporaries;
+    Symbol *nextTemp = temp->next;
+    while(temp){
+        free(temp);
+        temp = nextTemp;
+        nextTemp = temp->next;
+    }
 }

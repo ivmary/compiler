@@ -37,5 +37,6 @@ void cleanSymbolTable(void);
 char *newTemp();
 Symbol *createTemp(SymbolType type, SymbolValue value);
 Symbol *convertToFloat(Symbol *x);
+void freeTemporaries();
 
 #endif
