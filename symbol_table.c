@@ -110,21 +110,21 @@ void cleanSymbolTable(void) {
     }
 }
 
-void printSymbol(Symbol *sym){
-    if(sym->type == TYPE_INT) printf("int %d\n",sym->value.i);
-    else if(sym->type == TYPE_FLOAT) printf("float %f\n",sym->value.f);
-    else printf("ptr %s\n",sym->value.ptr);
-}
+// void printSymbol(Symbol *sym){
+//     if(sym->type == TYPE_INT) printf("int %d\n",sym->value.i);
+//     else if(sym->type == TYPE_FLOAT) printf("float %f\n",sym->value.f);
+//     else printf("ptr %s\n",sym->value.ptr);
+// }
 
-void printSymbolTable(){
-    for(int i=0;i<TABLE_SIZE;i++){
-        if(symbolTable[i]){
-            Symbol *temp = symbolTable[i];
-            while(temp){
-                printf("symbol: ");
-                printSymbol(temp);
-                temp=temp->next;
-            }
-        }
-    }
-}
+// void printSymbolTable(){
+//     for(int i=0;i<TABLE_SIZE;i++){
+//         if(symbolTable[i]){
+//             Symbol *temp = symbolTable[i];
+//             while(temp){
+//                 printf("symbol: ");
+//                 printSymbol(temp);
+//                 temp=temp->next;
+//             }
+//         }
+//     }
+// }
