@@ -1,16 +1,21 @@
 %code {
     #include <stdio.h>
+    #include <stdarg.h>
     #include <string.h>
-
+    #include <stdlib.h>
+    
     extern int yylex();
     extern int yyparse();
     extern FILE* yyin;
     void yyerror (const char *s);
     static const char *relop_to_opcode(RelOp op);
+    void emit(char *fmt,...);
 }
 
 %code requires {
     #include "symbol_table.h"
+    #define MAX_INSTR 1000
+    #define INSTR_LEN 64
     
     typedef struct NumData {
         SymbolType type;
@@ -33,6 +38,9 @@
         RELOP_LE, // <=
         RELOP_GE // >=
     } RelOp;
+
+    extern char *instructions[MAX_INSTR];
+    extern int next_instr;
 }
 
 %union {
@@ -69,8 +77,14 @@
 %locations
 %%
 
-program: declarations stmt_block { 
-    printf("HALT\n"); // End of program
+program: {
+    for(int i=0;i<MAX_INSTR;i++) instructions[i] = NULL;
+} declarations stmt_block { 
+    for(int i=0;i<next_instr;i++){
+        printf("%s\n",instructions[i]);
+        free(instructions[i]);
+    }
+    printf("%d:HALT\n",next_instr); // End of program
   }
 
 declarations : declarations declaration { } 
@@ -131,9 +145,9 @@ assignment_stmt : ID '=' expression ';' {
 
     if(id && id->type == $3->type){
         if(id->type == TYPE_INT) {
-            printf("IASN %s %s\n",id->name,$3->name);
+            emit("%d:IASN %s %s",next_instr,id->name,$3->name);
         } else if(id->type == TYPE_FLOAT) {
-            printf("RASN %s %s\n",id->name,$3->name);
+            emit("%d:RASN %s %s",next_instr,id->name,$3->name);
         } else {
             printf("error\n"); // Trying to assing unsupported type
         }
@@ -146,9 +160,9 @@ input_stmt : INPUT '(' ID ')' ';' {
     Symbol *id = lookup($3);
     if(id) {
         if(id->type == TYPE_INT) {
-            printf("IINP %s\n",id->name);
+            emit("%d:IINP %s",next_instr,id->name);
         } else if(id->type == TYPE_FLOAT){
-            printf("RINP %s\n",id->name);
+            emit("%d:RINP %s",next_instr,id->name);
         }
     }
     else {
@@ -159,9 +173,9 @@ input_stmt : INPUT '(' ID ')' ';' {
 output_stmt : OUTPUT '(' expression ')' ';' {
     if($3){
         if($3->type == TYPE_INT) {
-            printf("IPRT %s\n",$3->name);
+            emit("%d:IPRT %s",next_instr,$3->name);
         } else if($3->type == TYPE_FLOAT){
-            printf("RPRT %s\n",$3->name);
+            emit("%d:RPRT %s",next_instr,$3->name);
         }
     } else {
         printf("Vaeiable %s is not declared\n",$3->name);
@@ -169,9 +183,8 @@ output_stmt : OUTPUT '(' expression ')' ';' {
 }
 
 if_stmt : IF '(' boolexpr ')' {
-        printf("JMPZ line %s\n",$3->name);
-    }  stmt { printf("JMP exit line \n"); } ELSE stmt {
-    printf("end: \n");
+        emit("%d:JMPZ ? %s",next_instr,$3->name);
+    }  stmt { emit("%d:JMP ? ",next_instr); } ELSE stmt {
     $$ = NULL;
 }
 
@@ -208,10 +221,12 @@ boolfactor : NOT '(' boolexpr ')' {
     else {
         int useFloat = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT);
 
-        Symbol *left  = useFloat ? convertToFloat($1) : $1;
-        Symbol *right = useFloat ? convertToFloat($3) : $3;
+        Symbol *first  = useFloat ? convertToFloat($1) : $1;
+        Symbol *second = useFloat ? convertToFloat($3) : $3;
+        if($1->type == TYPE_INT) {emit("%d:ITOR %s %s",next_instr, first->name, $1->name);}
+        if($3->type==TYPE_INT) {emit("%d:ITOR %s %s",next_instr, second->name, $3->name);}
 
-        if (!left || !right) {
+        if (!first || !second) {
             $$ = NULL;
         } else {
             const char *mn = relop_to_opcode($2);
@@ -219,12 +234,13 @@ boolfactor : NOT '(' boolexpr ')' {
                 $$ = NULL;
             } else {
                 Symbol *result = createTemp(TYPE_INT, (SymbolValue){0});
-                printf("%c%s %s %s %s\n",
+                emit("%d:%c%s %s %s %s",
+                    next_instr,
                     useFloat ? 'R' : 'I',
                     mn,
                     result->name,
-                    left->name,
-                    right->name);
+                    first->name,
+                    second->name);
                 $$ = result;
             }
         }
@@ -242,19 +258,22 @@ expression : expression ADDOP term {
 
         if (resType == TYPE_FLOAT) {      
             Symbol *first = convertToFloat($1);      
-            Symbol *second = convertToFloat($3);      
+            Symbol *second = convertToFloat($3);
+            if($1->type == TYPE_INT) {emit("%d:ITOR %s %s",next_instr, first->name, $1->name);}
+            if($3->type==TYPE_INT) {emit("%d:ITOR %s %s",next_instr, second->name, $3->name);}
+   
             if (!first || !second) {
                 $$ = NULL;
             } else if($2 == '+') {
-                printf("RADD %s %s %s\n",res->name,first->name,second->name);
+                emit("%d:RADD %s %s %s",next_instr,res->name,first->name,second->name);
             } else if($2 == '-'){
-                printf("RSUB %s %s %s\n",res->name,first->name,second->name);
+                emit("%d:RSUB %s %s %s",next_instr,res->name,first->name,second->name);
             }
         } else { 
             if($2 == '+') {
-                printf("IADD %s %s %s\n",res->name,$1->name,$3->name);
+                emit("%d:IADD %s %s %s",next_instr,res->name,$1->name,$3->name);
             } else if($2 == '-'){
-                printf("ISUB %s %s %s\n",res->name,$1->name,$3->name);
+                emit("%d:ISUB %s %s %s",next_instr,res->name,$1->name,$3->name);
             }    
         }
         $$ = res;
@@ -276,19 +295,22 @@ term : term MULOP factor {
 
         if (resType == TYPE_FLOAT) { 
             Symbol *first = convertToFloat($1);      
-            Symbol *second = convertToFloat($3);      
+            Symbol *second = convertToFloat($3);
+            if($1->type == TYPE_INT) {emit("%d:ITOR %s %s",next_instr, first->name, $1->name);}
+            if($3->type==TYPE_INT) {emit("%d:ITOR %s %s",next_instr, second->name, $3->name);}
+
             if (!first || !second) {
                 $$ = NULL;
             } else if($2 == '*') {
-                printf("RMLT %s %s %s\n",res->name,$1->name,$3->name);
+                emit("%d:RMLT %s %s %s",next_instr,res->name,first->name,second->name);
             } else if($2 == '/'){
-                printf("RDIV %s %s %s\n",res->name,$1->name,$3->name);
+                emit("%d:RDIV %s %s %s",next_instr,res->name,first->name,second->name);
             }
         } else { 
             if($2 == '*') {
-                printf("IMLT %s %s %s\n",res->name,$1->name,$3->name);
+                emit("%d:IMLT %s %s %s",next_instr,res->name,$1->name,$3->name);
             } else if($2 == '/'){
-                printf("IDIV %s %s %s\n",res->name,$1->name,$3->name);
+                emit("%d:IDIV %s %s %s",next_instr,res->name,$1->name,$3->name);
             }    
         }
         $$ = res;
@@ -311,13 +333,13 @@ factor : '(' expression ')' {
 
         if ($1 == TYPE_INT) { // Cast to INT
             res = createTemp(TYPE_INT,$3->value);
-            
-            printf("RTOI %s %s\n",res->name,$3->name);
+
+            emit("%d:RTOI %s %s",next_instr,res->name,$3->name);
         }
         else { /* Cast to FLOAT */
             res = createTemp(TYPE_FLOAT,$3->value);
 
-            printf("ITOR %s %s\n",res->name,$3->name);
+            emit("%d:ITOR %s %s",next_instr,res->name,$3->name);
         }
 
         $$ = res;
@@ -357,8 +379,12 @@ factor : '(' expression ')' {
 
 %%
 
+char *instructions[MAX_INSTR];
+int next_instr = 0;
+
 int main(int argc, char **argv){
     extern FILE *yyin;
+
     initSymbolTable();
 
     if (argc != 2) {
@@ -398,4 +424,21 @@ static const char *relop_to_opcode(RelOp op) {
         case RELOP_GE: return "GEQ"; */
         default:       return NULL;
     }
+}
+
+void emit(char *fmt, ...){
+    if(next_instr >= MAX_INSTR){
+        fprintf(stderr,"Instruction buffer overflow\n");
+        exit(1);
+    }
+
+    char buffer[INSTR_LEN];
+
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buffer, sizeof(buffer), fmt, args);
+    va_end(args);
+
+    instructions[next_instr] = strdup(buffer);
+    next_instr++;
 }

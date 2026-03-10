@@ -142,7 +142,6 @@ Symbol *convertToFloat(Symbol *x) {
 
     SymbolValue dummy = (SymbolValue){0};
     Symbol *t = createTemp(TYPE_FLOAT, dummy);
-    printf("ITOR %s %s\n", t->name, x->name);
     return t;
 }
 
