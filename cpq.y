@@ -6,7 +6,7 @@
     extern int yyparse();
     extern FILE* yyin;
     void yyerror (const char *s);
-
+    static const char *relop_to_opcode(RelOp op);
 }
 
 %code requires {
@@ -24,6 +24,15 @@
         char* name;
         struct idNamesList *next;
     } idNamesList;
+
+    typedef enum {
+        RELOP_EQ, // == 
+        RELOP_NE, // !=
+        RELOP_LT, // <
+        RELOP_GT, // >
+        RELOP_LE, // <=
+        RELOP_GE // >=
+    } RelOp;
 }
 
 %union {
@@ -34,24 +43,23 @@
     NumData num;
     idNamesList *namesList;
     char op;
+    RelOp relop;
     SymbolType type;
 }
 
 %token <sval> ID
 %token <num> NUM
 %token INT FLOAT 
-%token RELOP 
+%token <relop> RELOP 
 %token <op> ADDOP MULOP
 %token IF ELSE SWITCH CASE BREAK DEFAULT WHILE OUTPUT INPUT 
 %token <type> CAST
 %token NOT OR AND
 
-/* %type <ival> stmt_block */
-/* %type <ival> declarations type  */
 %type declarations
-%type <sym> factor term expression 
+%type <sym> factor term expression boolfactor boolterm boolexpr if_stmt
 %type <type> type
-%type program   
+%type program 
 %type <namesList> idlist
 
 %define parse.error verbose
@@ -160,8 +168,11 @@ output_stmt : OUTPUT '(' expression ')' ';' {
     }
 }
 
-if_stmt : IF '(' boolexpr ')' stmt ELSE stmt {
-
+if_stmt : IF '(' boolexpr ')' {
+        printf("JMPZ line %s\n",$3->name);
+    }  stmt { printf("JMP exit line \n"); } ELSE stmt {
+    printf("end: \n");
+    $$ = NULL;
 }
 
 while_stmt : WHILE '(' boolexpr ')' stmt
@@ -179,14 +190,47 @@ stmtlist : stmtlist stmt
 | /*epsilon */
 
 boolexpr : boolexpr OR boolterm
+{
+    $$ = NULL;
+}
 | boolterm
 
 boolterm : boolterm AND boolfactor 
 | boolfactor
 
-boolfactor : NOT '(' boolexpr ')'
-| expression RELOP expression
+boolfactor : NOT '(' boolexpr ')' {
 
+}
+| expression RELOP expression {
+    if(!$1 || !$3) { $$=NULL; }
+    else if(!($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+        ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) { $$=NULL; }
+    else {
+        int useFloat = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT);
+
+        Symbol *left  = useFloat ? convertToFloat($1) : $1;
+        Symbol *right = useFloat ? convertToFloat($3) : $3;
+
+        if (!left || !right) {
+            $$ = NULL;
+        } else {
+            const char *mn = relop_to_opcode($2);
+            if (!mn) {
+                $$ = NULL;
+            } else {
+                Symbol *result = createTemp(TYPE_INT, (SymbolValue){0});
+                printf("%c%s %s %s %s\n",
+                    useFloat ? 'R' : 'I',
+                    mn,
+                    result->name,
+                    left->name,
+                    right->name);
+                $$ = result;
+            }
+        }
+        
+    }
+}
 
 expression : expression ADDOP term { 
     if (($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
@@ -344,3 +388,14 @@ void yyerror (const char *s)
   fprintf (stderr, "line %d: %s\n", yylineno, s);
 }
 
+static const char *relop_to_opcode(RelOp op) {
+    switch (op) {
+        case RELOP_EQ: return "EQL";
+        case RELOP_NE: return "NQL";
+        case RELOP_LT: return "LSS";
+        case RELOP_GT: return "GRT";
+        /* case RELOP_LE: return "LEQ";
+        case RELOP_GE: return "GEQ"; */
+        default:       return NULL;
+    }
+}

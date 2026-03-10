@@ -18,6 +18,7 @@
 %x COMMENT
 DIGIT [0-9]
 LETTER [a-z]
+RELOP "=="|"!="|"<"|">"|"<="|">="
 PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 
 %x STAR_COMMENT
@@ -27,6 +28,12 @@ PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 %%
 <INITIAL>
 "if" { return IF; }
+"else" { return ELSE; }
+"switch" { return SWITCH; }
+"case" { return CASE; }
+"break" { return BREAK; }
+"default" { return DEFAULT; }
+"while" { return WHILE; }
 "input" { return INPUT; }
 "output" { return OUTPUT; }
 
@@ -43,6 +50,26 @@ PUNCTUATIONS ";"|"="|","|":"|"("|")"|"{"|"}"
 
 [+-] { yylval.op = yytext[0]; return ADDOP; }
 [*/] { yylval.op = yytext[0]; return MULOP; }
+
+[!] { return NOT; }
+"||" { return OR; }
+"&&" { return AND; }
+
+{RELOP} { 
+  if(!strcmp(yytext,"==")){
+    yylval.relop = RELOP_EQ;
+  } else if (!strcmp(yytext,"!=")) {
+    yylval.relop = RELOP_NE;
+  } else if(!strcmp(yytext,"<")) {
+    yylval.relop = RELOP_LT; 
+  } else if(!strcmp(yytext,">")) {
+    yylval.relop = RELOP_GT;
+  } else if(!strcmp(yytext,"<=")) {
+    yylval.relop = RELOP_LE;
+  } else if(!strcmp(yytext,">=")) {
+    yylval.relop = RELOP_GE;
+  }
+  return RELOP;}
 
 {PUNCTUATIONS} { return yytext[0]; }
 
