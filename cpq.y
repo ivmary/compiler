@@ -1,15 +1,20 @@
 %code {
     #include <stdio.h>
-    #include <stdarg.h>
+    // #include <stdarg.h>
     #include <string.h>
-    #include <stdlib.h>
+    // #include <stdlib.h>
     
     extern int yylex();
     extern int yyparse();
     extern FILE* yyin;
     void yyerror (const char *s);
     static const char *relop_to_opcode(RelOp op);
-    void emit(char *fmt,...);
+    void emit(const char *op,const char *arg1,const char *arg2,const char *arg3);
+    jmpList *makeList(int instr);
+    jmpList *merge(jmpList *first, jmpList *second);
+    void backpatch(jmpList *lst, int target);
+    void printCode();
+    void freeCode();
 }
 
 %code requires {
@@ -39,20 +44,38 @@
         RELOP_GE // >=
     } RelOp;
 
-    extern char *instructions[MAX_INSTR];
+    typedef struct jmpList{
+        int ptr;
+        struct jmpList *next;
+    } jmpList;
+
+    typedef struct {
+        jmpList* truelist;
+        jmpList* falselist;
+    } BoolAttr;
+
+    typedef struct Instruction{
+        const char* op;     // instruction name
+        char* arg1;   // destination or label
+        char* arg2;
+        char* arg3;
+    }Instruction;
+
+    extern Instruction code[MAX_INSTR];
     extern int next_instr;
 }
 
 %union {
     Symbol *sym;
     char *sval;
-    int ival;
-    float fval;
+    //int ival;
+    //float fval;
     NumData num;
     idNamesList *namesList;
     char op;
     RelOp relop;
     SymbolType type;
+    BoolAttr *boolAttr;
 }
 
 %token <sval> ID
@@ -65,7 +88,8 @@
 %token NOT OR AND
 
 %type declarations
-%type <sym> factor term expression boolfactor boolterm boolexpr if_stmt
+%type <sym> factor term expression if_stmt 
+%type <boolAttr> boolfactor boolterm boolexpr 
 %type <type> type
 %type program 
 %type <namesList> idlist
@@ -77,14 +101,10 @@
 %locations
 %%
 
-program: {
-    for(int i=0;i<MAX_INSTR;i++) instructions[i] = NULL;
-} declarations stmt_block { 
-    for(int i=0;i<next_instr;i++){
-        printf("%s\n",instructions[i]);
-        free(instructions[i]);
-    }
+program: declarations stmt_block { 
+    printCode();
     printf("%d:HALT\n",next_instr); // End of program
+    freeCode();
   }
 
 declarations : declarations declaration { } 
@@ -145,9 +165,9 @@ assignment_stmt : ID '=' expression ';' {
 
     if(id && id->type == $3->type){
         if(id->type == TYPE_INT) {
-            emit("%d:IASN %s %s",next_instr,id->name,$3->name);
+            emit("IASN",id->name,$3->name,NULL);
         } else if(id->type == TYPE_FLOAT) {
-            emit("%d:RASN %s %s",next_instr,id->name,$3->name);
+            emit("RASN",id->name,$3->name,NULL);
         } else {
             printf("error\n"); // Trying to assing unsupported type
         }
@@ -160,9 +180,9 @@ input_stmt : INPUT '(' ID ')' ';' {
     Symbol *id = lookup($3);
     if(id) {
         if(id->type == TYPE_INT) {
-            emit("%d:IINP %s",next_instr,id->name);
+            emit("IINP",id->name,NULL,NULL);
         } else if(id->type == TYPE_FLOAT){
-            emit("%d:RINP %s",next_instr,id->name);
+            emit("RINP",id->name,NULL,NULL);
         }
     }
     else {
@@ -173,9 +193,9 @@ input_stmt : INPUT '(' ID ')' ';' {
 output_stmt : OUTPUT '(' expression ')' ';' {
     if($3){
         if($3->type == TYPE_INT) {
-            emit("%d:IPRT %s",next_instr,$3->name);
+            emit("IPRT",$3->name,NULL,NULL);
         } else if($3->type == TYPE_FLOAT){
-            emit("%d:RPRT %s",next_instr,$3->name);
+            emit("RPRT",$3->name,NULL,NULL);
         }
     } else {
         printf("Vaeiable %s is not declared\n",$3->name);
@@ -183,8 +203,10 @@ output_stmt : OUTPUT '(' expression ')' ';' {
 }
 
 if_stmt : IF '(' boolexpr ')' {
-        emit("%d:JMPZ ? %s",next_instr,$3->name);
-    }  stmt { emit("%d:JMP ? ",next_instr); } ELSE stmt {
+        // emit("%d:JMPZ ? %s",next_instr,$3->name);
+    }  stmt 
+    /* { emit("%d:JMP ? ",next_instr); }  */
+    ELSE stmt {
     $$ = NULL;
 }
 
@@ -204,48 +226,80 @@ stmtlist : stmtlist stmt
 
 boolexpr : boolexpr OR boolterm
 {
-    $$ = NULL;
 }
-| boolterm
+| boolterm {
+}
 
-boolterm : boolterm AND boolfactor 
-| boolfactor
+boolterm : boolterm AND boolfactor {
+
+}
+| boolfactor {
+}
 
 boolfactor : NOT '(' boolexpr ')' {
+    $$ = $3;
 
+    jmpList* tmp = $$->truelist;
+    $$->truelist = $$->falselist;
+    $$->falselist = tmp;
 }
 | expression RELOP expression {
-    if(!$1 || !$3) { $$=NULL; }
-    else if(!($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
-        ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) { $$=NULL; }
-    else {
-        int useFloat = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT);
 
-        Symbol *first  = useFloat ? convertToFloat($1) : $1;
-        Symbol *second = useFloat ? convertToFloat($3) : $3;
-        if($1->type == TYPE_INT) {emit("%d:ITOR %s %s",next_instr, first->name, $1->name);}
-        if($3->type==TYPE_INT) {emit("%d:ITOR %s %s",next_instr, second->name, $3->name);}
+    $$ = malloc(sizeof(BoolAttr));
 
-        if (!first || !second) {
-            $$ = NULL;
-        } else {
-            const char *mn = relop_to_opcode($2);
-            if (!mn) {
-                $$ = NULL;
-            } else {
-                Symbol *result = createTemp(TYPE_INT, (SymbolValue){0});
-                emit("%d:%c%s %s %s %s",
-                    next_instr,
-                    useFloat ? 'R' : 'I',
-                    mn,
-                    result->name,
-                    first->name,
-                    second->name);
-                $$ = result;
-            }
-        }
+    Symbol *temp = createTemp(TYPE_INT,(SymbolValue){0});
+
+    // emit(relop_to_opcode($2), temp->name, $1->place, $3->place);
+    int useFloat = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT);
+
+    char opcode[10];
+    sprintf(opcode, "%c%s", useFloat ? 'R' : 'I', relop_to_opcode($2));
+    
+    emit(opcode,
+        temp->name,
+        $1->name,
+        $3->name);
+
+    $$->falselist = makeList(next_instr);
+    // emit("JMPZ", -1, temp->name);
+    emit("JMPZ","_",temp->name,NULL);
+
+    $$->truelist = makeList(next_instr);
+    // emit("JUMP", -1);
+    emit("JUMP","_",NULL,NULL);
+
+    // if(!$1 || !$3) { $$=NULL; }
+    // else if(!($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+    //     ($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) { $$=NULL; }
+    // else {
+    //     int useFloat = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT);
+
+    //     Symbol *first  = useFloat ? convertToFloat($1) : $1;
+    //     Symbol *second = useFloat ? convertToFloat($3) : $3;
+
+    //     if(useFloat && $1->type == TYPE_INT) {emit("%d:ITOR %s %s",next_instr, first->name, $1->name);}
+    //     if(useFloat && $3->type==TYPE_INT) {emit("%d:ITOR %s %s",next_instr, second->name, $3->name);}
+
+    //     if (!first || !second) {
+    //         $$ = NULL;
+    //     } else {
+    //         const char *mn = relop_to_opcode($2);
+    //         if (!mn) {
+    //             $$ = NULL;
+    //         } else {
+    //             Symbol *result = createTemp(TYPE_INT, (SymbolValue){0});
+    //             emit("%d:%c%s %s %s %s",
+    //                 next_instr,
+    //                 useFloat ? 'R' : 'I',
+    //                 mn,
+    //                 result->name,
+    //                 first->name,
+    //                 second->name);
+    //             $$ = result;
+    //         }
+    //     }
         
-    }
+    // }
 }
 
 expression : expression ADDOP term { 
@@ -259,21 +313,21 @@ expression : expression ADDOP term {
         if (resType == TYPE_FLOAT) {      
             Symbol *first = convertToFloat($1);      
             Symbol *second = convertToFloat($3);
-            if($1->type == TYPE_INT) {emit("%d:ITOR %s %s",next_instr, first->name, $1->name);}
-            if($3->type==TYPE_INT) {emit("%d:ITOR %s %s",next_instr, second->name, $3->name);}
+            if($1->type == TYPE_INT) {emit("ITOR", first->name, $1->name,NULL);}
+            if($3->type==TYPE_INT) {emit("ITOR", second->name, $3->name,NULL);}
    
             if (!first || !second) {
                 $$ = NULL;
             } else if($2 == '+') {
-                emit("%d:RADD %s %s %s",next_instr,res->name,first->name,second->name);
+                emit("RADD",res->name,first->name,second->name);
             } else if($2 == '-'){
-                emit("%d:RSUB %s %s %s",next_instr,res->name,first->name,second->name);
+                emit("RSUB",res->name,first->name,second->name);
             }
         } else { 
             if($2 == '+') {
-                emit("%d:IADD %s %s %s",next_instr,res->name,$1->name,$3->name);
+                emit("IADD",res->name,$1->name,$3->name);
             } else if($2 == '-'){
-                emit("%d:ISUB %s %s %s",next_instr,res->name,$1->name,$3->name);
+                emit("ISUB",res->name,$1->name,$3->name);
             }    
         }
         $$ = res;
@@ -296,21 +350,21 @@ term : term MULOP factor {
         if (resType == TYPE_FLOAT) { 
             Symbol *first = convertToFloat($1);      
             Symbol *second = convertToFloat($3);
-            if($1->type == TYPE_INT) {emit("%d:ITOR %s %s",next_instr, first->name, $1->name);}
-            if($3->type==TYPE_INT) {emit("%d:ITOR %s %s",next_instr, second->name, $3->name);}
+            if($1->type == TYPE_INT) {emit("ITOR", first->name, $1->name,NULL);}
+            if($3->type==TYPE_INT) {emit("ITOR", second->name, $3->name,NULL);}
 
             if (!first || !second) {
                 $$ = NULL;
             } else if($2 == '*') {
-                emit("%d:RMLT %s %s %s",next_instr,res->name,first->name,second->name);
+                emit("RMLT",res->name,first->name,second->name);
             } else if($2 == '/'){
-                emit("%d:RDIV %s %s %s",next_instr,res->name,first->name,second->name);
+                emit("RDIV",res->name,first->name,second->name);
             }
         } else { 
             if($2 == '*') {
-                emit("%d:IMLT %s %s %s",next_instr,res->name,$1->name,$3->name);
+                emit("IMLT",res->name,$1->name,$3->name);
             } else if($2 == '/'){
-                emit("%d:IDIV %s %s %s",next_instr,res->name,$1->name,$3->name);
+                emit("IDIV",res->name,$1->name,$3->name);
             }    
         }
         $$ = res;
@@ -334,12 +388,12 @@ factor : '(' expression ')' {
         if ($1 == TYPE_INT) { // Cast to INT
             res = createTemp(TYPE_INT,$3->value);
 
-            emit("%d:RTOI %s %s",next_instr,res->name,$3->name);
+            emit("RTOI",res->name,$3->name,NULL);
         }
         else { /* Cast to FLOAT */
             res = createTemp(TYPE_FLOAT,$3->value);
 
-            emit("%d:ITOR %s %s",next_instr,res->name,$3->name);
+            emit("ITOR",res->name,$3->name,NULL);
         }
 
         $$ = res;
@@ -378,9 +432,8 @@ factor : '(' expression ')' {
     $$ = num; }
 
 %%
-
-char *instructions[MAX_INSTR];
-int next_instr = 0;
+Instruction code[MAX_INSTR];
+int next_instr;
 
 int main(int argc, char **argv){
     extern FILE *yyin;
@@ -426,19 +479,67 @@ static const char *relop_to_opcode(RelOp op) {
     }
 }
 
-void emit(char *fmt, ...){
-    if(next_instr >= MAX_INSTR){
-        fprintf(stderr,"Instruction buffer overflow\n");
-        exit(1);
-    }
+// Adding instructions to the instructions list 
+void emit(const char *op,const char *arg1,const char *arg2,const char *arg3){
+    code[next_instr].op = op;
 
-    char buffer[INSTR_LEN];
+    code[next_instr].arg1 = arg1 ? strdup(arg1) : NULL;
+    code[next_instr].arg2 = arg2 ? strdup(arg2) : NULL;
+    code[next_instr].arg3 = arg3 ? strdup(arg3) : NULL;
 
-    va_list args;
-    va_start(args, fmt);
-    vsnprintf(buffer, sizeof(buffer), fmt, args);
-    va_end(args);
-
-    instructions[next_instr] = strdup(buffer);
     next_instr++;
+}
+
+jmpList *makeList(int instr){
+    jmpList *node = malloc(sizeof(jmpList));
+    node->ptr = instr;
+    node->next = NULL;
+
+    return node;
+}
+
+jmpList *merge(jmpList *first, jmpList *second){
+    if (!first) return second;
+    if (!second) return first;
+
+    jmpList* temp = first;
+    while (temp->next)
+        temp = temp->next;
+
+    temp->next = second;
+    return first;
+}
+
+void patch_instruction(jmpList *instr, int target) {
+    
+}
+
+void backpatch(jmpList *lst, int target) {
+    while(lst) {
+        patch_instruction(lst,target);
+        lst = lst->next;
+    }
+}
+
+void printCode()
+{
+    for(int i = 0; i < next_instr; i++)
+    {
+        printf("%d: %s", i, code[i].op);
+
+        if(code[i].arg1) printf(" %s", code[i].arg1);
+        if(code[i].arg2) printf(" %s", code[i].arg2);
+        if(code[i].arg3) printf(" %s", code[i].arg3);
+
+        printf("\n");
+    }
+}
+
+void freeCode() {
+    for(int i = 0; i < next_instr; i++)
+    {
+        if(code[i].arg1) free(code[i].arg1);
+        if(code[i].arg2) free(code[i].arg2);
+        if(code[i].arg3) free(code[i].arg3);
+    }
 }
