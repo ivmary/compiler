@@ -213,8 +213,13 @@ stmt {
     backpatch($8,next_instr);
 }
 
-while_stmt : WHILE '(' boolexpr ')' M stmt {
-    
+while_stmt : WHILE '(' M boolexpr ')' M stmt {
+    char buff[16];
+    snprintf(buff,sizeof(buff),"%d",$3);
+    emit("JUMP",buff,NULL,NULL);
+
+    backpatch($4->truelist, $6);
+    backpatch($4->falselist,next_instr);
 }
 
 switch_stmt : SWITCH '(' expression ')' '{' caselist DEFAULT ':' stmtlist '}'
@@ -232,8 +237,7 @@ stmtlist : stmtlist stmt
 boolexpr : boolexpr OR M {
     backpatch($1->falselist, $3);
 }
-boolterm
-{
+boolterm {
     $$ = malloc(sizeof(BoolAttr));
     $$->truelist = merge($1->truelist,$5->truelist);
     $$->falselist = $5->falselist;
@@ -242,8 +246,7 @@ boolterm
     $$ = $1;
 }
 
-boolterm : boolterm AND M 
-{
+boolterm : boolterm AND M {
     backpatch($1->truelist, $3);
 }
 boolfactor {
