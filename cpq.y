@@ -77,6 +77,7 @@
     RelOp relop;
     SymbolType type;
     BoolAttr *boolAttr;
+    int marker;
 }
 
 %token <sval> ID
@@ -94,6 +95,7 @@
 %type <type> type
 %type program 
 %type <namesList> idlist
+%type <marker> M
 
 %define parse.error verbose
 
@@ -203,11 +205,13 @@ output_stmt : OUTPUT '(' expression ')' ';' {
     }
 }
 
-if_stmt : IF '(' boolexpr ')' {
-        // emit("%d:JMPZ ? %s",next_instr,$3->name);
-    }  stmt 
-    /* { emit("%d:JMP ? ",next_instr); }  */
+if_stmt : IF '(' boolexpr ')' stmt 
+{
+    emit("JMP","_",NULL,NULL);
+    backpatch($3->falselist,next_instr);
+}
     ELSE stmt {
+    backpatch($8->truelist,next_instr);
     $$ = NULL;
 }
 
@@ -235,6 +239,7 @@ boolterm : boolterm AND boolfactor {
 
 }
 | boolfactor {
+
 }
 
 boolfactor : NOT '(' boolexpr ')' {
@@ -357,7 +362,7 @@ term : term MULOP factor {
                 second = convertToFloat($3);
                 emit("ITOR", second->name, $3->name, NULL);
             }
-            
+
             if (!first || !second) {
                 $$ = NULL;
             } else if($2 == '*') {
@@ -435,6 +440,10 @@ factor : '(' expression ')' {
     
     addIRSym(num);
     $$ = num; }
+
+M: /* empty */ {
+    $$=next_instr;
+}
 
 %%
 Instruction code[MAX_INSTR];
