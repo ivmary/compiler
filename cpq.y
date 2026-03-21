@@ -230,17 +230,21 @@ stmt_block : '{' stmtlist '}'
 stmtlist : stmtlist stmt 
 | /*epsilon */
 
-boolexpr : boolexpr OR boolterm
+boolexpr : boolexpr OR M {
+    backpatch($1->falselist, $3);
+}
+boolterm
 {
+    $$->truelist = merge($1->truelist,$5->truelist);
 }
 | boolterm {
+    $$ = $1;
 }
 
-boolterm : boolterm AND boolfactor {
-
+boolterm : boolterm AND M boolfactor {
 }
 | boolfactor {
-
+    $$=$1;
 }
 
 boolfactor : NOT '(' boolexpr ')' {
