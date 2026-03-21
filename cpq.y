@@ -59,6 +59,12 @@
         jmpList* breaklist;
     } StmtAttr;
 
+    typedef struct {
+        Symbol* expr;
+        jmpList* breaklist;
+        jmpList* nextlist;
+    } CaseAttr;
+
     typedef struct Instruction{
         const char* op;     // instruction name
         char* arg1;   // destination or label
@@ -73,7 +79,7 @@
 %union {
     Symbol *sym;
     char *sval;
-    //int ival;
+    int ival;
     //float fval;
     NumData num;
     idNamesList *namesList;
@@ -82,6 +88,7 @@
     SymbolType type;
     BoolAttr *boolAttr;
     StmtAttr *stmtAttr;
+    CaseAttr *caseAttr;
     jmpList *next;
     int marker;
 }
@@ -95,9 +102,10 @@
 %token <type> CAST
 %token NOT OR AND
 
-%type <sym> factor term expression
+%type <sym> factor term expression S
 %type <boolAttr> boolfactor boolterm boolexpr 
-%type <stmtAttr> break_stmt stmt_block stmtlist stmt if_stmt while_stmt switch_stmt
+%type <stmtAttr> break_stmt stmt_block stmtlist stmt if_stmt while_stmt switch_stmt 
+%type <caseAttr> caselist
 %type <type> type
 /* %type program declarations */
 %type <namesList> idlist
@@ -251,18 +259,48 @@ while_stmt : WHILE '(' M boolexpr ')' M stmt {
     $$->breaklist = NULL;
 }
 
-switch_stmt : SWITCH '(' expression ')' '{' caselist DEFAULT ':' stmtlist '}' {
-    
+switch_stmt : SWITCH '(' expression ')' S '{' caselist M DEFAULT ':' stmtlist '}' {
+    if($3->type!=TYPE_INT) printf("Type error: switch expression must be int\n");
+    else {
+    }
+    backpatch($7->breaklist,next_instr);
+    backpatch($7->nextlist, $8);
+    backpatch($11->breaklist,next_instr);
 
     $$ = malloc(sizeof(StmtAttr));
     $$->breaklist = NULL;
 }
 
-caselist : caselist CASE NUM ':' stmtlist {
+S: /* empty */ {
+    $$ = $<sym>-2;
+}
+
+caselist : caselist CASE NUM ':' {
+    backpatch($1->nextlist, next_instr);
+    if($3.type != TYPE_INT) printf("Type error: switch expression must be int\n");
     
+    char buff[16];
+
+    snprintf(buff,sizeof(buff),"%d",$3.value.ival);
+
+    Symbol *temp = createTemp(TYPE_INT,(SymbolValue){0});
+    emit("IEQL",temp->name,$1->expr->name,buff);
+
+    $<ival>$ = next_instr;
+    emit("JMPZ","_",temp->name,NULL);
+
+}  stmtlist {
+    $$ = malloc(sizeof(CaseAttr));
+    $$->expr = $1->expr;    
+    $$->breaklist = merge($1->breaklist,$6->breaklist);
+    $$->nextlist = makeList($<ival>5);
+
 }
 | /* epsilon */ {
-
+    $$ = malloc(sizeof(CaseAttr));
+    $$->expr = $<sym>-3;
+    $$->breaklist = NULL;
+    $$->nextlist = NULL;
 }
 
 break_stmt : BREAK ';' {

@@ -8,7 +8,6 @@
 
   extern int yylineno;
 
-// extern int atoi (const char *);
 %}
 
 %option noyywrap
