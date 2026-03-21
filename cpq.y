@@ -210,8 +210,11 @@ output_stmt : OUTPUT '(' expression ')' ';' {
 if_stmt : IF '(' boolexpr ')' M {
     backpatch($3->truelist,$5);
 }
-stmt N ELSE M stmt {
+stmt N ELSE M 
+{
     backpatch($3->falselist,$10);
+}
+stmt {
     backpatch($8,next_instr);
     $$ = NULL;
 }
@@ -243,7 +246,14 @@ boolterm
     $$ = $1;
 }
 
-boolterm : boolterm AND M boolfactor {
+boolterm : boolterm AND M 
+{
+    backpatch($1->truelist, $3);
+}
+boolfactor {
+    $$ = malloc(sizeof(BoolAttr));
+    $$->falselist = merge($1->falselist,$5->falselist);
+    $$->truelist = $5->truelist;
 }
 | boolfactor {
     $$=$1;
@@ -291,6 +301,7 @@ boolfactor : NOT '(' boolexpr ')' {
                 temp->name,
                 first->name,
                 second->name);
+            $$->falselist = makeList(next_instr);
             emit("JMPZ","_",temp->name,NULL);
 
             $$->truelist = makeList(next_instr);
