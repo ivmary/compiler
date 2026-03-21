@@ -91,10 +91,10 @@
 %token NOT OR AND
 
 %type declarations
-%type <sym> factor term expression if_stmt 
+%type <sym> factor term expression
 %type <boolAttr> boolfactor boolterm boolexpr 
 %type <type> type
-%type program 
+%type program if_stmt 
 %type <namesList> idlist
 %type <marker> M
 %type <next> N
@@ -152,12 +152,8 @@ idlist : idlist ',' ID {
     $$=temp;
 }
 
-stmt : assignment_stmt {
-
-}
-| input_stmt {
-
-}
+stmt : assignment_stmt
+| input_stmt
 | output_stmt
 | if_stmt
 | while_stmt
@@ -210,16 +206,16 @@ output_stmt : OUTPUT '(' expression ')' ';' {
 if_stmt : IF '(' boolexpr ')' M {
     backpatch($3->truelist,$5);
 }
-stmt N ELSE M 
-{
+stmt N ELSE M {
     backpatch($3->falselist,$10);
 }
 stmt {
     backpatch($8,next_instr);
-    $$ = NULL;
 }
 
-while_stmt : WHILE '(' boolexpr ')' stmt
+while_stmt : WHILE '(' boolexpr ')' M stmt {
+    
+}
 
 switch_stmt : SWITCH '(' expression ')' '{' caselist DEFAULT ':' stmtlist '}'
 
