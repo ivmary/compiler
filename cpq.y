@@ -108,7 +108,7 @@
 
 program: declarations stmt_block { 
     printCode();
-    printf("%d:HALT\n",next_instr); // End of program
+    printf("%d: HALT\n",next_instr); // End of program
     freeCode();
   }
 
@@ -228,14 +228,16 @@ break_stmt : BREAK ';'
 stmt_block : '{' stmtlist '}'
 
 stmtlist : stmtlist stmt 
-| /*epsilon */
+| /* epsilon */
 
 boolexpr : boolexpr OR M {
     backpatch($1->falselist, $3);
 }
 boolterm
 {
+    $$ = malloc(sizeof(BoolAttr));
     $$->truelist = merge($1->truelist,$5->truelist);
+    $$->falselist = $5->falselist;
 }
 | boolterm {
     $$ = $1;
@@ -285,13 +287,10 @@ boolfactor : NOT '(' boolexpr ')' {
 
             char opcode[10];
             sprintf(opcode, "%c%s", useFloat ? 'R' : 'I', relop_to_opcode($2));
-            
             emit(opcode,
                 temp->name,
                 first->name,
                 second->name);
-
-            $$->falselist = makeList(next_instr);
             emit("JMPZ","_",temp->name,NULL);
 
             $$->truelist = makeList(next_instr);
@@ -422,6 +421,8 @@ factor : '(' expression ')' {
         printf("undeclared identifier\n"); // TODO: error
         $$ = NULL;
     }
+    printf("%s is %d\n",id->name,id->type);
+
     free($1); }
 | NUM { 
     Symbol *num = malloc(sizeof(Symbol));
@@ -506,7 +507,7 @@ static const char *relop_to_opcode(RelOp op) {
 
 // Adding instructions to the instructions list 
 void emit(const char *op,const char *arg1,const char *arg2,const char *arg3){
-    code[next_instr].op = op;
+    code[next_instr].op = strdup(op);
 
     code[next_instr].arg1 = arg1 ? strdup(arg1) : NULL;
     code[next_instr].arg2 = arg2 ? strdup(arg2) : NULL;
