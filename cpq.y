@@ -97,9 +97,9 @@
 
 %type <sym> factor term expression
 %type <boolAttr> boolfactor boolterm boolexpr 
-%type <stmtAttr> break_stmt
+%type <stmtAttr> break_stmt stmt_block stmtlist stmt if_stmt while_stmt switch_stmt
 %type <type> type
-%type program if_stmt declarations while_stmt switch_stmt
+/* %type program declarations */
 %type <namesList> idlist
 %type <marker> M
 %type <next> N
@@ -157,14 +157,33 @@ idlist : idlist ',' ID {
     $$=temp;
 }
 
-stmt : assignment_stmt
-| input_stmt
-| output_stmt
-| if_stmt
-| while_stmt
-| switch_stmt
-| break_stmt
-| stmt_block
+stmt : assignment_stmt {
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = NULL;
+}
+| input_stmt {
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = NULL;
+}
+| output_stmt {
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = NULL;
+}
+| if_stmt { 
+    $$ = $1;
+}
+| while_stmt { 
+    $$ = $1;
+}
+| switch_stmt { 
+    $$ = $1;
+}
+| break_stmt { 
+    $$ = $1;
+}
+| stmt_block { 
+    $$ = $1;
+}
 
 assignment_stmt : ID '=' expression ';' {
     Symbol *id = lookup($1);
@@ -216,6 +235,8 @@ stmt N ELSE M {
 }
 stmt {
     backpatch($8,next_instr);
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = merge($7->breaklist,$12->breaklist);
 }
 
 while_stmt : WHILE '(' M boolexpr ')' M stmt {
@@ -225,23 +246,43 @@ while_stmt : WHILE '(' M boolexpr ')' M stmt {
 
     backpatch($4->truelist, $6);
     backpatch($4->falselist,next_instr);
+    backpatch($7->breaklist,next_instr);
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = NULL;
 }
 
-switch_stmt : SWITCH '(' expression ')' '{' caselist DEFAULT ':' stmtlist '}'
+switch_stmt : SWITCH '(' expression ')' '{' caselist DEFAULT ':' stmtlist '}' {
+    
 
-caselist : caselist CASE NUM ':' stmtlist 
-| /* epsilon */
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = NULL;
+}
+
+caselist : caselist CASE NUM ':' stmtlist {
+    
+}
+| /* epsilon */ {
+
+}
 
 break_stmt : BREAK ';' {
-    $$ = malloc(sizeof(BoolAttr));
+    $$ = malloc(sizeof(StmtAttr));
     $$->breaklist = makeList(next_instr);
     emit("JUMP","_",NULL,NULL);
 }
 
-stmt_block : '{' stmtlist '}'
+stmt_block : '{' stmtlist '}' {
+    $$ = $2;
+}
 
-stmtlist : stmtlist stmt 
-| /* epsilon */
+stmtlist : stmtlist stmt {
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = merge($1->breaklist, $2->breaklist);
+}
+| /* epsilon */ { 
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = NULL; 
+}
 
 boolexpr : boolexpr OR M {
     backpatch($1->falselist, $3);
