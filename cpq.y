@@ -77,6 +77,7 @@
     RelOp relop;
     SymbolType type;
     BoolAttr *boolAttr;
+    jmpList *next;
     int marker;
 }
 
@@ -96,6 +97,7 @@
 %type program 
 %type <namesList> idlist
 %type <marker> M
+%type <next> N
 
 %define parse.error verbose
 
@@ -205,13 +207,12 @@ output_stmt : OUTPUT '(' expression ')' ';' {
     }
 }
 
-if_stmt : IF '(' boolexpr ')' stmt 
-{
-    emit("JMP","_",NULL,NULL);
-    backpatch($3->falselist,next_instr);
+if_stmt : IF '(' boolexpr ')' M {
+    backpatch($3->truelist,$5);
 }
-    ELSE stmt {
-    backpatch($8->truelist,next_instr);
+stmt N ELSE M stmt {
+    backpatch($3->falselist,$10);
+    backpatch($8,next_instr);
     $$ = NULL;
 }
 
@@ -439,10 +440,16 @@ factor : '(' expression ')' {
     }
     
     addIRSym(num);
-    $$ = num; }
+    $$ = num; 
+}
 
 M: /* empty */ {
     $$=next_instr;
+}
+
+N: /* empty */ {
+    $$ = makeList(next_instr); 
+    emit("JMP","_",NULL,NULL);
 }
 
 %%
