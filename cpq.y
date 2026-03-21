@@ -55,6 +55,10 @@
         jmpList* falselist;
     } BoolAttr;
 
+    typedef struct {
+        jmpList* breaklist;
+    } StmtAttr;
+
     typedef struct Instruction{
         const char* op;     // instruction name
         char* arg1;   // destination or label
@@ -77,6 +81,7 @@
     RelOp relop;
     SymbolType type;
     BoolAttr *boolAttr;
+    StmtAttr *stmtAttr;
     jmpList *next;
     int marker;
 }
@@ -90,11 +95,11 @@
 %token <type> CAST
 %token NOT OR AND
 
-%type declarations
 %type <sym> factor term expression
 %type <boolAttr> boolfactor boolterm boolexpr 
+%type <stmtAttr> break_stmt
 %type <type> type
-%type program if_stmt 
+%type program if_stmt declarations while_stmt switch_stmt
 %type <namesList> idlist
 %type <marker> M
 %type <next> N
@@ -227,7 +232,11 @@ switch_stmt : SWITCH '(' expression ')' '{' caselist DEFAULT ':' stmtlist '}'
 caselist : caselist CASE NUM ':' stmtlist 
 | /* epsilon */
 
-break_stmt : BREAK ';'
+break_stmt : BREAK ';' {
+    $$ = malloc(sizeof(BoolAttr));
+    $$->breaklist = makeList(next_instr);
+    emit("JUMP","_",NULL,NULL);
+}
 
 stmt_block : '{' stmtlist '}'
 
