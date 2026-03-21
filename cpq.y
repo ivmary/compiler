@@ -421,7 +421,6 @@ factor : '(' expression ')' {
         printf("undeclared identifier\n"); // TODO: error
         $$ = NULL;
     }
-    printf("%s is %d\n",id->name,id->type);
 
     free($1); }
 | NUM { 
