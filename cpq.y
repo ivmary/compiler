@@ -1,4 +1,7 @@
 %code {
+    // Mary Ivshenko 212051189 
+    // Miriam Mizrahi 312599293
+
     // Forward declarations for lexer, parser, and helper functions
     extern int yylex();
     extern int yyparse();
@@ -690,7 +693,7 @@ int main(int argc, char **argv){
 
         // Write generated three-address code to output file
         printCode();
-        fprintf(yyout, "%d: HALT\n",next_instr); // End of program
+        fprintf(yyout, "HALT\n"); // End of program
         
         // Clean up: close files and free allocated memory
         fclose(yyout);
