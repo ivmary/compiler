@@ -378,19 +378,31 @@ boolfactor : NOT '(' boolexpr ')' {
         } else {
             $$ = malloc(sizeof(BoolAttr));
 
-            Symbol *temp = createTemp(TYPE_INT,(SymbolValue){0});
-
             char opcode[10];
             sprintf(opcode, "%c%s", useFloat ? 'R' : 'I', relop_to_opcode($2));
+
+            Symbol *temp = createTemp(TYPE_INT,(SymbolValue){0});
+
             emit(opcode,
                 temp->name,
                 first->name,
                 second->name);
-            $$->falselist = makeList(next_instr);
+            
+            jmpList *t1 = makeList(next_instr);
             emit("JMPZ","_",temp->name,NULL);
 
-            $$->truelist = makeList(next_instr);
+            jmpList *t2 = makeList(next_instr);
             emit("JUMP","_",NULL,NULL);
+
+            if ($2 == RELOP_LE || $2 == RELOP_GE) 
+            {
+                $$->falselist = t2;
+                $$->truelist = t1;
+            }
+            else {
+                $$->falselist = t1;
+                $$->truelist = t2;
+            }
         }
         
     }
@@ -594,8 +606,8 @@ static const char *relop_to_opcode(RelOp op) {
         case RELOP_NE: return "NQL";
         case RELOP_LT: return "LSS";
         case RELOP_GT: return "GRT";
-        /* case RELOP_LE: return "LEQ";
-        case RELOP_GE: return "GEQ"; */
+        case RELOP_LE: return "GRT";
+        case RELOP_GE: return "LSS";
         default:       return NULL;
     }
 }
