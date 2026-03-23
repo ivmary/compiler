@@ -84,6 +84,8 @@
 
     extern FILE *yyin;
     extern FILE *yyout;
+
+    extern int compile_success;
 }
 
 %union {
@@ -638,6 +640,7 @@ N: /* empty */ {
 // Global code array and instruction counter for three-address code generation
 Instruction code[MAX_INSTR];
 int next_instr;
+int compile_success = 1;
 
 int main(int argc, char **argv){
     // Initialize symbol table
@@ -667,45 +670,51 @@ int main(int argc, char **argv){
     
     // Run the parser to generate three-address code
     yyparse ();
-
-    // Create output filename by replacing .ou with .qud
-    char output[256];
-    strncpy(output, input, len - 3);
-    output[len - 3] = '\0';
-    strcat(output, ".qud");
-
-    // Open output file for writing generated code
-    yyout = fopen(output, "w");
-    if (!yyout) {
-        fprintf(stderr, "Error: failed to create %s\n", output);
-        return 3;
-    }
-
-    // Write generated three-address code to output file
-    printCode();
-    fprintf(yyout, "%d: HALT\n",next_instr); // End of program
-    
-    // Clean up: close files and free allocated memory
     fclose (yyin);
-    fclose(yyout);
+
+    // Create output file only if compilation was successful
+    if(compile_success)
+    {
+        // Create output filename by replacing .ou with .qud
+        char output[256];
+        strncpy(output, input, len - 3);
+        output[len - 3] = '\0';
+        strcat(output, ".qud");
+
+        // Open output file for writing generated code
+        yyout = fopen(output, "w");
+        if (!yyout) {
+            fprintf(stderr, "Error: failed to create %s\n", output);
+            return 3;
+        }
+
+        // Write generated three-address code to output file
+        printCode();
+        fprintf(yyout, "%d: HALT\n",next_instr); // End of program
+        
+        // Clean up: close files and free allocated memory
+        fclose(yyout);
+    }   
 
     freeCode();
     cleanSymbolTable();
     freeTemporaries();
 
-    return 0;
+    return compile_success ? 0 : 1;
 }
 
 
 void yyerror (const char *s, ...)
 {
-  extern int yylineno;
-  va_list args;
-  va_start(args, s);
-  fprintf(stderr, "%d: Error: ", yylineno);
-  vfprintf(stderr, s, args);
-  fprintf(stderr, "\n");
-  va_end(args);
+    extern int yylineno;
+    va_list args;
+    va_start(args, s);
+    fprintf(stderr, "%d: Error: ", yylineno);
+    vfprintf(stderr, s, args);
+    fprintf(stderr, "\n");
+    va_end(args);
+
+    compile_success = 0;
 }
 
 // Convert relational operator enum to corresponding three-address code opcode
@@ -783,7 +792,7 @@ void printCode() {
     for(int i = 0; i < next_instr; i++)
     {
         // Format: instruction_number: opcode arg1 arg2 arg3
-        fprintf(yyout,"%d: %s", i, code[i].op);
+        fprintf(yyout,"%s", code[i].op);
 
         // Print arguments if they exist
         if(code[i].arg1) fprintf(yyout," %s", code[i].arg1);
