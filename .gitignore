@@ -10,3 +10,4 @@ symbol_table
 !symbol_table.c
 !symbol_table.h
 quad.py
+*.qud

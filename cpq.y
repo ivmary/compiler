@@ -646,13 +646,13 @@ M: /* empty */ {
 
 N: /* empty */ {
     $$ = makeList(next_instr); 
-    emit("JMP","_",NULL,NULL);
+    emit("JUMP","_",NULL,NULL);
 }
 
 %%
 // Global code array and instruction counter for three-address code generation
 Instruction code[MAX_INSTR];
-int next_instr;
+int next_instr=0;
 int compile_success = 1;
 
 int main(int argc, char **argv){
@@ -784,7 +784,8 @@ jmpList *merge(jmpList *first, jmpList *second){
 // Update a jump instruction to target a specific address
 void patch_instruction(int instr_ptr, int target) {
     char buf[16];
-    sprintf(buf, "%d", target);
+    // Patch to target the next instruction
+    sprintf(buf, "%d", target + 1);
 
     // Replace placeholder jump target with actual address
     free(code[instr_ptr].arg1);
