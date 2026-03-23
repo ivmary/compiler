@@ -36,7 +36,6 @@ void initSymbolTable(void);
 Symbol *insertSymbol(SymbolType type, char* name, SymbolValue value);
 Symbol *insertInt(char* name, int value);
 Symbol *insertFloat(char* name, float value);
-Symbol *insertPtr(char* name, void* value);
 Symbol *lookup(char* name);
 void removeSymbol (char* name);
 void cleanSymbolTable(void);

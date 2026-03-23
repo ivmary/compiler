@@ -58,12 +58,6 @@ Symbol *insertFloat(char* name, float value) {
     return insertSymbol(TYPE_FLOAT,name,val);
 }
 
-Symbol *insertPtr(char* name, void* value) {
-    SymbolValue val;
-    val.ptr = value;
-    return insertSymbol(TYPE_ID,name,val);
-}
-
 Symbol *lookup(char* name) {
     size_t hashed = hash(name);
 
