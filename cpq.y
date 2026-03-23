@@ -291,7 +291,7 @@ stmt {
 while_stmt : WHILE '(' M boolexpr ')' M stmt {
     // Emit jump back to loop test (M = start of while condition)
     char buff[16];
-    snprintf(buff,sizeof(buff),"%d",$3);
+    snprintf(buff,sizeof(buff),"%d",$3+1);
     emit("JUMP",buff,NULL,NULL);
 
     // Backpatch true branches to jump to loop body (second M marker)
