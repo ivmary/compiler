@@ -161,6 +161,10 @@ declaration : idlist ':' type ';' {
         tempId = tempId->next;
         free(toRelease);
 }}
+| error ';' {
+        compile_success = 0;
+        yyerrok;
+      }
 
 type : INT { $$ = TYPE_INT; } 
 | FLOAT { $$ = TYPE_FLOAT; }
@@ -202,6 +206,12 @@ stmt : assignment_stmt {
 }
 | stmt_block { 
     $$ = $1;
+}
+| error ';' { // Recovery from a missing ; error
+    compile_success = 0;
+    yyerrok;
+    $$ = malloc(sizeof(StmtAttr));
+    $$->breaklist = NULL;
 }
 
 assignment_stmt : ID '=' expression ';' {
