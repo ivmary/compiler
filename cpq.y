@@ -5,6 +5,8 @@
     extern int yylex();
     extern int yyparse();
     extern FILE* yyin;
+    extern FILE *yyout;
+
     void yyerror (const char *s);
     static const char *relop_to_opcode(RelOp op);
     void emit(const char *op,const char *arg1,const char *arg2,const char *arg3);
@@ -117,11 +119,7 @@
 %locations
 %%
 
-program: declarations stmt_block { 
-    printCode();
-    printf("%d: HALT\n",next_instr); // End of program
-    freeCode();
-  }
+program: declarations stmt_block { }
 
 declarations : declarations declaration { } 
 | /* epsilon */ {}
@@ -569,7 +567,6 @@ Instruction code[MAX_INSTR];
 int next_instr;
 
 int main(int argc, char **argv){
-    extern FILE *yyin;
 
     initSymbolTable();
 
@@ -577,16 +574,41 @@ int main(int argc, char **argv){
         fprintf (stderr, "Usage: %s <input-file-name>\n", argv[0]);
 	    return 1;
     }
+
+    char *input = argv[1];
+    int len = strlen(input);
+
+    if (len < 3 || strcmp(input + len - 3, ".ou") != 0) {
+        fprintf(stderr, "Error: input file must end with .ou\n");
+        return 1;
+    }
+
     yyin = fopen (argv [1], "r");
     if (yyin == NULL) {
-        fprintf (stderr, "failed to open %s\n", argv[1]);
+        fprintf (stderr, "Error: failed to open %s\n", argv[1]);
         return 2;
     }
     
     yyparse ();
+
+    char output[256];
+    strncpy(output, input, len - 3);
+    output[len - 3] = '\0';
+    strcat(output, ".qud");
+
+    yyout = fopen(output, "w");
+    if (!yyout) {
+        fprintf(stderr, "Error: failed to create %s\n", output);
+        return 3;
+    }
+
+    printCode();
+    fprintf(yyout, "%d: HALT\n",next_instr); // End of program
     
     fclose (yyin);
+    fclose(yyout);
 
+    freeCode();
     cleanSymbolTable();
     freeTemporaries();
 
@@ -661,13 +683,13 @@ void backpatch(jmpList *lst, int target) {
 void printCode() {
     for(int i = 0; i < next_instr; i++)
     {
-        printf("%d: %s", i, code[i].op);
+        fprintf(yyout,"%d: %s", i, code[i].op);
 
-        if(code[i].arg1) printf(" %s", code[i].arg1);
-        if(code[i].arg2) printf(" %s", code[i].arg2);
-        if(code[i].arg3) printf(" %s", code[i].arg3);
+        if(code[i].arg1) fprintf(yyout," %s", code[i].arg1);
+        if(code[i].arg2) fprintf(yyout," %s", code[i].arg2);
+        if(code[i].arg3) fprintf(yyout," %s", code[i].arg3);
 
-        printf("\n");
+        fprintf(yyout,"\n");
     }
 }
 
