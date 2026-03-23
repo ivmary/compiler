@@ -353,7 +353,7 @@ boolfactor : NOT '(' boolexpr ')' {
 }
 | expression RELOP expression {
     if(!$1 || !$3) { $$=NULL; }
-    else if(!($1->type == TYPE_INT || $1->type == TYPE_FLOAT) && 
+    else if(!($1->type == TYPE_INT || $1->type == TYPE_FLOAT) || 
         !($3->type == TYPE_INT || $3->type == TYPE_FLOAT)) { $$=NULL; }
     else {
         int useFloat = ($1->type == TYPE_FLOAT || $3->type == TYPE_FLOAT);
